@@ -217,6 +217,9 @@
 
   <div class="card hidden fade-in" id="reviewStep">
     <div class="step-label"><span class="step-num">2</span> Review &amp; edit items</div>
+    <div style="background:#fff8ee;border:1px solid #f0d090;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:12px;color:#7a5a30;line-height:1.7">
+      <strong style="color:#B45F06">AI can make mistakes.</strong> Please review all parsed values before sharing or downloading. You can tap on any value in the table to edit it directly.
+    </div>
     <div class="tbl-wrap">
       <table class="sheet">
         <thead>
@@ -296,6 +299,11 @@
           <tbody id="copyTableBody"></tbody>
         </table>
       </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">
+        Alternatively, if you are more comfortable with Google Sheets, you can
+        <a href="https://docs.google.com/spreadsheets/d/17NjdTholG5O66SmpdLzFgA8yQ429Z2NPKgpMlRARMrw/edit?usp=sharing" target="_blank" style="color:#1C4587;font-weight:600">create a copy of Pao's template</a>
+        and paste this table at cell <strong>A3</strong>.
+      </p>
       <button onclick="copyTable()" id="copyBtn"
         style="margin-top:8px;font-size:12px;font-family:inherit;padding:6px 14px;border:1px solid var(--border);border-radius:7px;background:transparent;cursor:pointer;color:var(--text)">
         Copy table
