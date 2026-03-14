@@ -147,7 +147,7 @@
   .add-row-btn:hover { color: var(--blue-dark); }
 
   .disc-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
+    display: grid; grid-template-columns: repeat(4, 1fr);
     gap: 12px; margin-top: 1rem;
   }
   .disc-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
@@ -177,6 +177,13 @@
   }
   .btn-dl:hover { opacity: 0.88; transform: translateY(-1px); }
   .btn-dl:active { transform: translateY(0); }
+  .btn-share {
+    flex: 1.2; padding: 0.65rem; font-size: 13px; font-weight: 600; font-family: inherit;
+    cursor: pointer; border-radius: 10px; border: 1px solid #1C4587;
+    background: transparent; color: #1C4587;
+    transition: background 0.15s;
+  }
+  .btn-share:hover { background: #f0f4fa; }
 
   @media (max-width: 600px) {
     .disc-grid { grid-template-columns: 1fr; }
@@ -200,7 +207,7 @@
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fi').click()">
       <span class="upload-icon">📷</span>
       <p class="upload-main"><strong>Click to upload</strong> or drag &amp; drop</p>
-      <p class="upload-hint">JPG or PNG · max 5MB</p>
+      <p class="upload-hint">JPG or PNG</p>
       <input type="file" id="fi" accept="image/jpeg,image/png,image/webp" onchange="handleFile(event)">
     </div>
     <img id="prevImg" class="preview-img hidden" alt="Receipt preview">
@@ -243,7 +250,7 @@
     </div>
     <button class="add-row-btn" onclick="addRow()">＋ Add row</button>
 
-    <div class="disc-grid">
+    <div class="disc-grid" style="display:none">
       <div class="disc-field">
         <label>Service Charge</label>
         <input type="number" id="scVal" step="0.01" placeholder="not found" onchange="renderFoot()">
@@ -253,11 +260,30 @@
         <input type="number" id="vatVal" step="0.01" placeholder="not found" onchange="renderFoot()">
       </div>
       <div class="disc-field">
-        <label>SC Discount (20%)</label>
+        <label>SC Discount</label>
         <input type="number" id="scdVal" step="0.01" placeholder="not found" onchange="renderFoot()">
+      </div>
+      <div class="disc-field">
+        <label>PWD Discount</label>
+        <input type="number" id="pwdVal" step="0.01" placeholder="not found" onchange="renderFoot()">
       </div>
     </div>
 
+    <div id="shareResult" style="display:none;margin-bottom:1rem;padding:1rem 1.25rem;background:#e8f4ff;border-radius:12px;border:1.5px solid #1C4587">
+      <div style="font-size:11px;color:#1C4587;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px">🔗 Shareable link — send this to your group</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="shareLink" type="text" readonly
+          style="flex:1;font-size:13px;padding:8px 12px;border:1.5px solid #1C4587;border-radius:8px;background:#fff;color:#1a1a2e;font-family:inherit">
+        <button onclick="copyShareLink()" id="copyLinkBtn"
+          style="font-size:13px;font-weight:600;font-family:inherit;padding:8px 16px;border:none;border-radius:8px;background:#1C4587;color:#fff;cursor:pointer;white-space:nowrap">
+          Copy
+        </button>
+        <button onclick="openShareLink()" 
+          style="font-size:13px;font-weight:600;font-family:inherit;padding:8px 16px;border:1.5px solid #1C4587;border-radius:8px;background:transparent;color:#1C4587;cursor:pointer;white-space:nowrap">
+          Open ↗
+        </button>
+      </div>
+    </div>
     <div class="actions">
       <button class="btn-sec" onclick="resetApp()">Start over</button>
       <button class="btn-dl" onclick="downloadXlsx()">⬇ Download .xlsx for Google Sheets</button>
@@ -300,8 +326,7 @@
 
 <script>
   // ── CONFIG ──────────────────────────────────────────────────────────────────
-  // Replace this with your actual API Gateway URL after deploying Lambda
-  const PROXY_URL = 'https://zxflznjmv7.execute-api.ap-southeast-1.amazonaws.com/prod/parse';
+  const PROXY_URL  = 'https://zxflznjmv7.execute-api.ap-southeast-1.amazonaws.com/prod/parse';
   const ORDERS_URL = 'https://zxflznjmv7.execute-api.ap-southeast-1.amazonaws.com/prod/order';
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -317,6 +342,7 @@
 
   function handleFile(e) { if (e.target.files[0]) loadFile(e.target.files[0]); }
   function loadFile(file) {
+
     imageMime = file.type || 'image/jpeg';
     const r = new FileReader();
     r.onload = e => {
@@ -358,13 +384,15 @@
       items = parsed.items || [];
       if (!items.length) throw new Error('No items found on receipt.');
 
-      document.getElementById('scVal').value  = parsed.service_charge  != null ? parsed.service_charge  : '';
-      document.getElementById('vatVal').value = parsed.vat_adjustment  != null ? parsed.vat_adjustment  : '';
-      document.getElementById('scdVal').value = parsed.sc_discount     != null ? parsed.sc_discount     : '';
+      document.getElementById('scVal').value   = parsed.service_charge  != null ? parsed.service_charge  : '';
+      document.getElementById('vatVal').value  = parsed.vat_adjustment  != null ? parsed.vat_adjustment  : '';
+      document.getElementById('scdVal').value  = parsed.sc_discount     != null ? parsed.sc_discount     : '';
+      document.getElementById('pwdVal').value  = parsed.pwd_discount    != null ? parsed.pwd_discount    : '';
 
       renderAll();
       document.getElementById('reviewStep').classList.remove('hidden');
       setStatus(`✓ Parsed ${items.length} item${items.length !== 1 ? 's' : ''}. Review and edit below.`, 'ok');
+      shareOrder();
     } catch (err) {
       setStatus('Error: ' + err.message, 'error');
     } finally {
@@ -444,7 +472,8 @@
     const sub  = items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
     const vat  = getNum('vatVal');
     const scd  = getNum('scdVal');
-    const grand = sub + (vat||0) + (scd||0);
+    const pwd  = getNum('pwdVal');
+    const grand = sub + (vat||0) + (scd||0) + (pwd||0);
 
     document.getElementById('sheetFoot').innerHTML = `
       <tr>
@@ -471,12 +500,28 @@
       </tr>
       <tr>
         <td class="bg-white"></td>
-        <td class="bg-white">SC Discount (20%)</td>
+        <td class="bg-white">SC Discount</td>
         <td class="bg-white" style="text-align:right">${scd !== null ? scd.toFixed(2) : ''}</td>
         <td style="background:#e0e8f0;padding:0"></td>
         <td colspan="6" class="bg-white" style="text-align:center;font-size:11px;color:#a0aab8">0.00 per person</td>
         <td class="bg-white"></td><td class="bg-white"></td>
       </tr>
+      <tr>
+        <td class="bg-white"></td>
+        <td class="bg-white">PWD Discount</td>
+        <td class="bg-white" style="text-align:right">${pwd !== null ? pwd.toFixed(2) : ''}</td>
+        <td style="background:#e0e8f0;padding:0"></td>
+        <td colspan="6" class="bg-white" style="text-align:center;font-size:11px;color:#a0aab8">0.00 per person</td>
+        <td class="bg-white"></td><td class="bg-white"></td>
+      </tr>
+      ${pwd !== null ? `<tr>
+        <td class="bg-white"></td>
+        <td class="bg-white">PWD Discount</td>
+        <td class="bg-white" style="text-align:right">${pwd.toFixed(2)}</td>
+        <td style="background:#e0e8f0;padding:0"></td>
+        <td colspan="6" class="bg-white" style="text-align:center;font-size:11px;color:#a0aab8">0.00 per person</td>
+        <td class="bg-white"></td><td class="bg-white"></td>
+      </tr>` : ''}
       <tr>
         <td class="bg-grand" colspan="2" style="text-align:center">GRAND TOTAL</td>
         <td class="bg-grand" style="text-align:right">${grand.toFixed(2)}</td>
@@ -574,7 +619,7 @@
     sc(`A${LR}`,'    Less: Discounts',normL);
     for (let c=1;c<=20;c++) sc(XLSX.utils.encode_cell({r:LR-1,c}),'',normL);
 
-    const vat = getNum('vatVal'), scd = getNum('scdVal');
+    const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
     const VR=25;
     sc(`A${VR}`,'',normL); sc(`B${VR}`,'VAT Adjustment',normL);
     if (vat !== null) sc(`C${VR}`,vat,normR); else sc(`C${VR}`,'',normL);
@@ -582,14 +627,20 @@
     sc(`D${VR}`,'',normL); sc(`T${VR}`,'',normL); sc(`U${VR}`,'',normL);
 
     const SCR=26;
-    sc(`A${SCR}`,'',normL); sc(`B${SCR}`,'SC Discount (20%)',normL);
+    sc(`A${SCR}`,'',normL); sc(`B${SCR}`,'SC Discount',normL);
     if (scd !== null) sc(`C${SCR}`,scd,normR); else sc(`C${SCR}`,'',normL);
     ALL_P.forEach(c => sc(`${c}${SCR}`, scd!==null?0:'', normR));
     sc(`D${SCR}`,'',normL); sc(`T${SCR}`,'',normL); sc(`U${SCR}`,'',normL);
 
-    const GR=27;
+    const PWDR=27;
+    sc(`A${PWDR}`,'',normL); sc(`B${PWDR}`,'PWD Discount',normL);
+    if (pwd !== null) sc(`C${PWDR}`,pwd,normR); else sc(`C${PWDR}`,'',normL);
+    ALL_P.forEach(c => sc(`${c}${PWDR}`, pwd!==null?0:'', normR));
+    sc(`D${PWDR}`,'',normL); sc(`T${PWDR}`,'',normL); sc(`U${PWDR}`,'',normL);
+
+    const GR=28;
     sc(`A${GR}`,'GRAND TOTAL',grandC); sc(`B${GR}`,'',grandC);
-    ws[`C${GR}`] = { f:`SUM(C${SR}:C${SCR})`, t:'n', v:0, s:grandR };
+    ws[`C${GR}`] = { f:`SUM(C${SR}:C${PWDR})`, t:'n', v:0, s:grandR };
     sc(`D${GR}`,'',grandC);
     ALL_P.forEach(c => { ws[`${c}${GR}`]={ f:`SUM(${c}$${SR}:${c}$${SCR})`, t:'n', v:0, s:grandR }; });
     sc(`T${GR}`,'',grandC); sc(`U${GR}`,'',grandC);
@@ -611,6 +662,39 @@
     XLSX.writeFile(wb, fname);
   }
 
+  async function shareOrder() {
+    try {
+      const vat = getNum('vatVal'), scd = getNum('scdVal');
+      const res = await fetch(ORDERS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, vat_adjustment: vat, sc_discount: scd, pwd_discount: getNum('pwdVal') })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const link = `${window.location.origin}/order.html?id=${data.orderId}`;
+      document.getElementById('shareLink').value = link;
+      document.getElementById('shareResult').style.display = 'block';
+    } catch (err) {
+      setStatus('Error generating link: ' + err.message, 'error');
+    }
+  }
+
+  function openShareLink() {
+    const link = document.getElementById('shareLink').value;
+    if (link) window.open(link, '_blank');
+  }
+
+  function copyShareLink() {
+    const input = document.getElementById('shareLink');
+    navigator.clipboard.writeText(input.value).then(() => {
+      const btn = document.getElementById('copyLinkBtn');
+      btn.textContent = '✓ Copied!';
+      btn.style.background = '#1D9E75';
+      setTimeout(() => { btn.textContent = 'Copy'; btn.style.background = '#1C4587'; }, 2000);
+    });
+  }
+
   function resetApp() {
     imageBase64 = null; items = [];
     document.getElementById('prevImg').classList.add('hidden');
@@ -619,7 +703,9 @@
     document.getElementById('reviewStep').classList.add('hidden');
     document.getElementById('fi').value = '';
     setStatus('');
-    ['scVal','vatVal','scdVal'].forEach(id => document.getElementById(id).value = '');
+    ['scVal','vatVal','scdVal','pwdVal'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('shareResult').style.display = 'none';
+    document.getElementById('shareLink').value = '';
   }
 </script>
 </body>
