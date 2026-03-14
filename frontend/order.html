@@ -259,6 +259,10 @@
 
   // ── ORDER STEP ─────────────────────────────────────────────────────────────
   function getDiscountItems() {
+    // discount items are now stored in order.items with isDiscount flag
+    const fromItems = order.items.filter(it => it.isDiscount);
+    if (fromItems.length > 0) return fromItems;
+    // fallback: build from order fields for older orders
     const discounts = [];
     const vat = order.vat_adjustment;
     const scd = order.sc_discount;

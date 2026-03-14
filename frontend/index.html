@@ -701,10 +701,18 @@
     const btn = document.getElementById('shareBtn');
     if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
     try {
+      // include discount items in order.items so assignments are tracked
+      const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
+      const discountItems = [];
+      if (vat !== null) discountItems.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat, isDiscount: true });
+      if (scd !== null) discountItems.push({ qty: 1, name: 'SC Discount', unit_cost: scd, isDiscount: true });
+      if (pwd !== null) discountItems.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd, isDiscount: true });
+      const allItems = [...items, ...discountItems];
+
       const res = await fetch(ORDERS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, vat_adjustment: getNum('vatVal'), sc_discount: getNum('scdVal'), pwd_discount: getNum('pwdVal') })
+        body: JSON.stringify({ items: allItems, vat_adjustment: vat, sc_discount: scd, pwd_discount: pwd })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
