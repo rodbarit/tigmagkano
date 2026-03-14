@@ -298,8 +298,11 @@
           <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>
         </div>
         <div class="split-row hidden" id="split-row-${i}">
-          <span>Split with how many people?</span>
-          <input type="number" id="split-input-${i}" min="1" value="2" style="width:48px;font-size:13px;font-weight:600;padding:4px 8px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+          <span>Split</span>
+          <input type="number" id="split-orders-${i}" min="1" value="1" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+          <span>order(s) between</span>
+          <input type="number" id="split-people-${i}" min="1" value="2" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+          <span>people</span>
           <button class="apply-btn" onclick="applySplit(${i})">Apply</button>
           <span class="split-tag hidden" id="split-tag-${i}"></span>
         </div>
@@ -334,11 +337,14 @@
               <div class="qty-num" id="qty-${i}">${existing}</div>
               <button class="qty-btn" onclick="changeQty(${i}, 1)" style="color:#1D9E75;border-color:#b8e0d0">+</button>
             </div>
-            <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})" style="color:#1D9E75;border-color:#1D9E75">Split</button>
+            <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})" style="color:#1D9E75;border-color:#1D9E75">✂ Split</button>
           </div>
           <div class="split-row hidden" id="split-row-${i}">
-            <span>Split with how many people?</span>
-            <input type="number" id="split-input-${i}" min="1" value="2" style="width:48px;font-size:13px;font-weight:600;padding:4px 8px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+            <span>Split</span>
+            <input type="number" id="split-orders-${i}" min="1" value="1" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+            <span>order(s) between</span>
+            <input type="number" id="split-people-${i}" min="1" value="2" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+            <span>people</span>
             <button class="apply-btn" onclick="applySplit(${i})" style="background:#1D9E75">Apply</button>
             <span class="split-tag hidden" id="split-tag-${i}" style="background:#1D9E75"></span>
           </div>
@@ -363,19 +369,19 @@
       itemRow.style.borderColor = '#f0d090';
       itemRow.style.background = '#fffdf5';
       btn.style.background = '#fff0d0';
-      document.getElementById(`split-input-${i}`).focus();
+      document.getElementById(`split-orders-${i}`).focus();
     }
   }
 
   function applySplit(i) {
-    const n = parseInt(document.getElementById(`split-input-${i}`).value) || 1;
-    const val = Math.round((1 / n) * 1000) / 1000;
+    const orders = parseFloat(document.getElementById(`split-orders-${i}`)?.value) || 1;
+    const people = parseFloat(document.getElementById(`split-people-${i}`)?.value) || 1;
+    const val = Math.round((orders / people) * 1000) / 1000;
     myQtys[i] = val;
-    const display = val % 1 === 0 ? val : val;
     document.getElementById(`qty-${i}`).textContent = val;
-    document.getElementById(`qty-${i}`).style.color = '#B45F06';
+    document.getElementById(`qty-${i}`).style.color = '#E67E22';
     const tag = document.getElementById(`split-tag-${i}`);
-    tag.textContent = `÷${n} = ${val} each`;
+    tag.textContent = `${orders} ÷ ${people} = ${val} each`;
     tag.classList.remove('hidden');
     renderSummary();
   }
