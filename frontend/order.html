@@ -572,10 +572,10 @@
     // total to pay
     const grandTotal = itemsSubtotal + vat + scd + pwd;
     const personGrand = personTotals.map((t, i) => {
-      const da = order.discount_assignments || {};
       let discShare = 0;
       discountDefs.forEach(d => {
-        const qty = da[allNames[i]]?.[d.key] || 0;
+        const match = order.items.find(it => it.name === d.label);
+        const qty = match ? (getQty(match, order.items.indexOf(match), allNames[i]) || 0) : 0;
         discShare += qty * d.value;
       });
       return t + discShare;
