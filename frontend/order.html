@@ -464,8 +464,13 @@
 
     const vat = order.vat_adjustment || 0;
     const scd = order.sc_discount || 0;
+    const pwd = order.pwd_discount || 0;
+    const totalDiscount = vat + scd + pwd;
     const subtotal = totals.reduce((a, b) => a + b, 0);
-    const discountPerPerson = allNames.length > 0 ? (vat + scd) / allNames.length : 0;
+    const vatPerPerson  = allNames.length > 0 ? vat / allNames.length : 0;
+    const scdPerPerson  = allNames.length > 0 ? scd / allNames.length : 0;
+    const pwdPerPerson  = allNames.length > 0 ? pwd / allNames.length : 0;
+    const totalPerPerson = vatPerPerson + scdPerPerson + pwdPerPerson;
 
     html += `</tbody><tfoot>
       <tr class="total-row" style="border-top:1px solid var(--border)">
@@ -474,16 +479,32 @@
         ${totals.map(t => `<td class="r">₱${t.toFixed(2)}</td>`).join('')}
       </tr>`;
 
-    if (vat || scd) {
+    if (vat) {
       html += `<tr>
-        <td style="color:var(--muted);font-size:12px">VAT + SC Discount</td>
-        <td class="r" style="color:var(--muted);font-size:12px">₱${(vat+scd).toFixed(2)}</td>
-        ${allNames.map(() => `<td class="r" style="color:var(--muted);font-size:12px">₱${discountPerPerson.toFixed(2)}</td>`).join('')}
-      </tr>
-      <tr class="total-row">
+        <td style="color:var(--muted);font-size:12px">VAT Adjustment</td>
+        <td class="r" style="color:var(--muted);font-size:12px">₱${vat.toFixed(2)}</td>
+        ${allNames.map(() => `<td class="r" style="color:var(--muted);font-size:12px">₱${vatPerPerson.toFixed(2)}</td>`).join('')}
+      </tr>`;
+    }
+    if (scd) {
+      html += `<tr>
+        <td style="color:var(--muted);font-size:12px">SC Discount</td>
+        <td class="r" style="color:var(--muted);font-size:12px">₱${scd.toFixed(2)}</td>
+        ${allNames.map(() => `<td class="r" style="color:var(--muted);font-size:12px">₱${scdPerPerson.toFixed(2)}</td>`).join('')}
+      </tr>`;
+    }
+    if (pwd) {
+      html += `<tr>
+        <td style="color:var(--muted);font-size:12px">PWD Discount</td>
+        <td class="r" style="color:var(--muted);font-size:12px">₱${pwd.toFixed(2)}</td>
+        ${allNames.map(() => `<td class="r" style="color:var(--muted);font-size:12px">₱${pwdPerPerson.toFixed(2)}</td>`).join('')}
+      </tr>`;
+    }
+    if (totalDiscount) {
+      html += `<tr class="total-row">
         <td>Total to pay</td>
-        <td class="r">₱${(subtotal + vat + scd).toFixed(2)}</td>
-        ${totals.map(t => `<td class="r" style="color:#1D9E75">₱${(t + discountPerPerson).toFixed(2)}</td>`).join('')}
+        <td class="r">₱${(subtotal + totalDiscount).toFixed(2)}</td>
+        ${totals.map(t => `<td class="r" style="color:#1D9E75">₱${(t + totalPerPerson).toFixed(2)}</td>`).join('')}
       </tr>`;
     }
 
