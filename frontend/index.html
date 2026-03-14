@@ -284,10 +284,7 @@
         </button>
       </div>
     </div>
-    <div class="actions">
-      <button class="btn-sec" onclick="resetApp()">Start over</button>
-      <button class="btn-dl" onclick="downloadXlsx()">⬇ Download .xlsx for Google Sheets</button>
-    </div>
+
 
     <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:8px">
@@ -320,6 +317,10 @@
         style="margin-top:8px;font-size:12px;font-family:inherit;padding:6px 14px;border:1px solid var(--border);border-radius:7px;background:transparent;cursor:pointer;color:var(--text)">
         Copy table
       </button>
+    </div>
+
+    <div style="text-align:center;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)">
+      <button onclick="resetApp()" style="font-size:13px;font-family:inherit;padding:8px 24px;border:1px solid var(--border);border-radius:10px;background:transparent;cursor:pointer;color:var(--muted);transition:background 0.15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">Start over</button>
     </div>
   </div>
 </main>
@@ -407,21 +408,33 @@
     const tbody = document.getElementById('copyTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
-    items.forEach((it, i) => {
+    const allRows = [...items];
+    const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
+    if (vat !== null) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat, isDiscount: true });
+    if (scd !== null) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd, isDiscount: true });
+    if (pwd !== null) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd, isDiscount: true });
+
+    allRows.forEach((it, i) => {
       const tr = document.createElement('tr');
-      const bg = i % 2 === 0 ? '#fff' : '#f7f9fc';
+      const bg = it.isDiscount ? '#f0f7f4' : (i % 2 === 0 ? '#fff' : '#f7f9fc');
+      const color = it.isDiscount ? 'color:#1D9E75' : '';
       tr.innerHTML = `
-        <td style="padding:6px 12px;text-align:center;background:${bg};border-bottom:0.5px solid #eef1f6">${parseInt(it.qty)||1}</td>
-        <td style="padding:6px 12px;background:${bg};border-bottom:0.5px solid #eef1f6">${escHtml(it.name||'')}</td>
-        <td style="padding:6px 12px;text-align:right;background:${bg};border-bottom:0.5px solid #eef1f6">${(parseFloat(it.unit_cost)||0).toFixed(2)}</td>
+        <td style="padding:6px 12px;text-align:center;background:${bg};border-bottom:0.5px solid #eef1f6;${color}">${parseInt(it.qty)||1}</td>
+        <td style="padding:6px 12px;background:${bg};border-bottom:0.5px solid #eef1f6;${color}">${escHtml(it.name||'')}</td>
+        <td style="padding:6px 12px;text-align:right;background:${bg};border-bottom:0.5px solid #eef1f6;${color}">${(parseFloat(it.unit_cost)||0).toFixed(2)}</td>
       `;
       tbody.appendChild(tr);
     });
   }
 
   function copyTable() {
+    const allRows = [...items];
+    const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
+    if (vat !== null) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat });
+    if (scd !== null) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd });
+    if (pwd !== null) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd });
     const rows = [['Qty', 'Item Name', 'Unit Cost']];
-    items.forEach(it => rows.push([parseInt(it.qty)||1, it.name||'', (parseFloat(it.unit_cost)||0).toFixed(2)]));
+    allRows.forEach(it => rows.push([parseInt(it.qty)||1, it.name||'', (parseFloat(it.unit_cost)||0).toFixed(2)]));
     const text = rows.map(r => r.join('\t')).join('\n');
     navigator.clipboard.writeText(text).then(() => {
       const btn = document.getElementById('copyBtn');
