@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tigmagkano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --blue-dark: #1C4587;
+    --blue-hdr:  #1155CC;
+    --amber:     #B45F06;
+    --tan:       #FFF2CC;
+    --subtotal:  #C9DAF8;
+    --orange:    #F5A623;
+    --bg:        #f0f4fa;
+    --card:      #ffffff;
+    --border:    #dde5f0;
+    --text:      #1a1a2e;
+    --muted:     #5a6a80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--blue-dark);
+    color: #fff;
+    padding: 0.9rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 12px rgba(28,69,135,0.2);
+  }
+  .logo-box {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  header span { font-size: 12px; opacity: 0.55; margin-left: 4px; font-weight: 400; }
+
+  main { max-width: 940px; margin: 2rem auto; padding: 0 1.25rem 4rem; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .step-label {
+    font-size: 11px; font-weight: 600; color: #8899b5;
+    text-transform: uppercase; letter-spacing: 0.9px;
+    margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;
+  }
+  .step-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--blue-dark); color: #fff;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .upload-zone {
+    border: 2px dashed #c5d3e8;
+    border-radius: 12px;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { background: #f5f8ff; border-color: var(--blue-dark); }
+  .upload-zone input { display: none; }
+  .upload-icon { font-size: 40px; margin-bottom: 0.75rem; display: block; opacity: 0.4; }
+  .upload-main { font-size: 14px; color: var(--muted); }
+  .upload-main strong { color: var(--text); }
+  .upload-hint { font-size: 12px; color: #aab5c8; margin-top: 4px; }
+
+  .preview-img {
+    max-height: 210px; max-width: 100%;
+    border-radius: 10px; border: 1px solid var(--border);
+    margin-top: 1rem; display: block;
+  }
+
+  .parse-btn {
+    width: 100%; padding: 0.8rem; margin-top: 1rem;
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    background: var(--blue-dark); color: #fff;
+    border: none; border-radius: 10px;
+    cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  }
+  .parse-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+  .parse-btn:active:not(:disabled) { transform: translateY(0); }
+  .parse-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .status { font-size: 13px; color: var(--muted); margin-top: 0.65rem; text-align: center; min-height: 18px; }
+  .status.error { color: #c0392b; }
+  .status.ok { color: #1D9E75; }
+
+  .spinner {
+    display: inline-block; width: 13px; height: 13px;
+    border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .tbl-wrap { overflow-x: auto; font-size: 12px; border-radius: 8px; border: 1px solid var(--border); }
+  table.sheet { border-collapse: collapse; min-width: 740px; width: 100%; }
+  table.sheet td, table.sheet th { border: 0.5px solid #b8c8d8; padding: 3px 5px; white-space: nowrap; }
+
+  .bg-blue-hdr { background: #1155CC; color: #fff; font-weight: 700; text-align: center; }
+  .bg-blue-sub { background: #1C4587; color: #fff; font-weight: 700; }
+  .bg-amber    { background: #B45F06; color: #fff; font-weight: 700; text-align: center; }
+  .bg-tan      { background: #FFF2CC; }
+  .bg-subtotal { background: #C9DAF8; font-weight: 700; }
+  .bg-grand    { background: #1C4587; color: #fff; font-weight: 700; }
+  .bg-white    { background: #fff; }
+  .bg-orange   { background: #F5A623; color: #5a3000; font-size: 11px; text-align: center; }
+
+  input.ci {
+    background: transparent; border: none;
+    font-size: 12px; font-family: inherit;
+    width: 100%; padding: 0; color: inherit;
+  }
+  input.ci:focus { outline: 1px solid #1C4587; background: #fffde7; border-radius: 2px; }
+  input.ci.r { text-align: right; }
+
+  .del-btn { background: none; border: none; cursor: pointer; color: #b0bec8; font-size: 14px; padding: 0 4px; }
+  .del-btn:hover { color: #c0392b; }
+
+  .add-row-btn {
+    font-size: 12px; color: var(--muted); background: none; border: none;
+    cursor: pointer; padding: 6px 4px; display: flex; align-items: center; gap: 4px;
+    margin-top: 4px;
+  }
+  .add-row-btn:hover { color: var(--blue-dark); }
+
+  .disc-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-top: 1rem;
+  }
+  .disc-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .disc-field input {
+    width: 100%; font-size: 13px; font-family: inherit;
+    padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; color: var(--text);
+    transition: border-color 0.15s;
+  }
+  .disc-field input:focus { outline: none; border-color: var(--blue-dark); }
+  .disc-field input::placeholder { color: #c0ccda; }
+
+  .actions { display: flex; gap: 10px; margin-top: 1.25rem; }
+  .btn-sec {
+    flex: 1; padding: 0.65rem; font-size: 13px; font-family: inherit;
+    cursor: pointer; border-radius: 10px;
+    border: 1px solid var(--border); background: transparent; color: var(--text);
+    transition: background 0.15s;
+  }
+  .btn-sec:hover { background: var(--bg); }
+  .btn-dl {
+    flex: 2.5; padding: 0.65rem; font-size: 13px; font-weight: 600; font-family: inherit;
+    cursor: pointer; border-radius: 10px; border: none;
+    background: #1D9E75; color: #fff;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn-dl:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-dl:active { transform: translateY(0); }
+
+  @media (max-width: 600px) {
+    .disc-grid { grid-template-columns: 1fr; }
+    header h1 { font-size: 17px; }
+    .actions { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-box">🧾</div>
+  <div>
+    <h1>Tigmagkano <span>by Norwyn</span></h1>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="step-label"><span class="step-num">1</span> Upload receipt</div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fi').click()">
+      <span class="upload-icon">📷</span>
+      <p class="upload-main"><strong>Click to upload</strong> or drag &amp; drop</p>
+      <p class="upload-hint">JPG or PNG · max 5MB</p>
+      <input type="file" id="fi" accept="image/jpeg,image/png,image/webp" onchange="handleFile(event)">
+    </div>
+    <img id="prevImg" class="preview-img hidden" alt="Receipt preview">
+    <button class="parse-btn" id="parseBtn" onclick="parseReceipt()" disabled>Parse receipt</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="card hidden fade-in" id="reviewStep">
+    <div class="step-label"><span class="step-num">2</span> Review &amp; edit items</div>
+    <div class="tbl-wrap">
+      <table class="sheet">
+        <thead>
+          <tr>
+            <th class="bg-blue-sub" style="width:32px">Qty</th>
+            <th class="bg-blue-sub" style="width:160px">Item Name</th>
+            <th class="bg-blue-sub" style="width:76px;text-align:right">Unit Cost</th>
+            <th style="width:4px;background:#1C4587;border-color:#1C4587;padding:0"></th>
+            <th class="bg-blue-hdr" colspan="6" style="font-size:12px">ORDER BREAKDOWN</th>
+            <th class="bg-amber" style="width:150px">NOTES</th>
+            <th class="bg-blue-sub" style="width:22px"></th>
+          </tr>
+          <tr>
+            <th class="bg-blue-sub" style="text-align:center">Qty</th>
+            <th class="bg-blue-sub">Item Name</th>
+            <th class="bg-blue-sub" style="text-align:center">Unit Cost</th>
+            <th style="background:#1C4587;border-color:#1C4587;padding:0"></th>
+            <th class="bg-blue-sub" style="text-align:center">Ace</th>
+            <th class="bg-blue-sub" style="text-align:center">Aerjay</th>
+            <th class="bg-blue-sub" style="text-align:center">Gabi</th>
+            <th class="bg-blue-sub" style="text-align:center">Rod</th>
+            <th class="bg-blue-sub" style="text-align:center">Norwyn</th>
+            <th class="bg-blue-sub" style="text-align:center">Lanz</th>
+            <th class="bg-amber"></th>
+            <th class="bg-blue-sub"></th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+        <tfoot id="sheetFoot"></tfoot>
+      </table>
+    </div>
+    <button class="add-row-btn" onclick="addRow()">＋ Add row</button>
+
+    <div class="disc-grid">
+      <div class="disc-field">
+        <label>Service Charge</label>
+        <input type="number" id="scVal" step="0.01" placeholder="not found" onchange="renderFoot()">
+      </div>
+      <div class="disc-field">
+        <label>VAT Adjustment</label>
+        <input type="number" id="vatVal" step="0.01" placeholder="not found" onchange="renderFoot()">
+      </div>
+      <div class="disc-field">
+        <label>SC Discount (20%)</label>
+        <input type="number" id="scdVal" step="0.01" placeholder="not found" onchange="renderFoot()">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-sec" onclick="resetApp()">Start over</button>
+      <button class="btn-dl" onclick="downloadXlsx()">⬇ Download .xlsx for Google Sheets</button>
+    </div>
+  </div>
+</main>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────────────────────────────
+  // Replace this with your actual API Gateway URL after deploying Lambda
+  const PROXY_URL = 'https://YOUR_API_GATEWAY_ID.execute-api.YOUR_REGION.amazonaws.com/prod/parse';
+  // ────────────────────────────────────────────────────────────────────────────
+
+  let imageBase64 = null, imageMime = 'image/jpeg', items = [];
+
+  const uz = document.getElementById('uploadZone');
+  uz.addEventListener('dragover',  e => { e.preventDefault(); uz.classList.add('drag'); });
+  uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
+  uz.addEventListener('drop', e => {
+    e.preventDefault(); uz.classList.remove('drag');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+
+  function handleFile(e) { if (e.target.files[0]) loadFile(e.target.files[0]); }
+  function loadFile(file) {
+    if (file.size > 5 * 1024 * 1024) { setStatus('Image too large — max 5MB.', 'error'); return; }
+    imageMime = file.type || 'image/jpeg';
+    const r = new FileReader();
+    r.onload = e => {
+      imageBase64 = e.target.result.split(',')[1];
+      const img = document.getElementById('prevImg');
+      img.src = e.target.result;
+      img.classList.remove('hidden');
+      document.getElementById('parseBtn').disabled = false;
+      setStatus('');
+    };
+    r.readAsDataURL(file);
+  }
+
+  function setStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status' + (type ? ' ' + type : '');
+  }
+
+  async function parseReceipt() {
+    if (!imageBase64) return;
+    const btn = document.getElementById('parseBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Parsing receipt...';
+    setStatus('Sending to Claude...');
+
+    try {
+      const res = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageBase64, mediaType: imageMime })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const parsed = await res.json();
+
+      items = parsed.items || [];
+      if (!items.length) throw new Error('No items found on receipt.');
+
+      document.getElementById('scVal').value  = parsed.service_charge  != null ? parsed.service_charge  : '';
+      document.getElementById('vatVal').value = parsed.vat_adjustment  != null ? parsed.vat_adjustment  : '';
+      document.getElementById('scdVal').value = parsed.sc_discount     != null ? parsed.sc_discount     : '';
+
+      renderAll();
+      document.getElementById('reviewStep').classList.remove('hidden');
+      setStatus(`✓ Parsed ${items.length} item${items.length !== 1 ? 's' : ''}. Review and edit below.`, 'ok');
+    } catch (err) {
+      setStatus('Error: ' + err.message, 'error');
+    } finally {
+      btn.innerHTML = 'Parse receipt';
+      btn.disabled = false;
+    }
+  }
+
+  function renderAll() { renderBody(); renderFoot(); }
+
+  function renderBody() {
+    const tbody = document.getElementById('itemsBody');
+    tbody.innerHTML = '';
+    items.forEach((it, i) => {
+      const qty  = parseInt(it.qty) || 1;
+      const cost = parseFloat(it.unit_cost) || 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="bg-white" style="text-align:center">
+          <input class="ci r" type="number" min="1" step="1" value="${qty}"
+            onchange="items[${i}].qty=parseInt(this.value)||1;renderAll()">
+        </td>
+        <td class="bg-white">
+          <input class="ci" type="text" value="${escHtml(it.name||'')}"
+            onchange="items[${i}].name=this.value">
+        </td>
+        <td class="bg-white" style="text-align:right">
+          <input class="ci r" type="number" step="0.01" value="${cost.toFixed(2)}"
+            onchange="items[${i}].unit_cost=parseFloat(this.value)||0;renderAll()">
+        </td>
+        <td style="background:#e0e8f0;width:4px;padding:0"></td>
+        <td class="bg-tan"></td><td class="bg-tan"></td><td class="bg-tan"></td>
+        <td class="bg-tan"></td><td class="bg-tan"></td><td class="bg-tan"></td>
+        <td class="bg-white" style="font-size:11px;color:#a0aab8;font-style:italic;max-width:150px;overflow:hidden">
+          Not all orders accounted for.
+        </td>
+        <td class="bg-white" style="text-align:center">
+          <button class="del-btn" onclick="items.splice(${i},1);renderAll()" title="Remove">×</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderFoot() {
+    const sub  = items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
+    const vat  = getNum('vatVal');
+    const scd  = getNum('scdVal');
+    const grand = sub + (vat||0) + (scd||0);
+
+    document.getElementById('sheetFoot').innerHTML = `
+      <tr>
+        <td class="bg-subtotal" colspan="2" style="text-align:center">SUBTOTAL</td>
+        <td class="bg-subtotal" style="text-align:right">${sub.toFixed(2)}</td>
+        <td style="background:#b8cce4;padding:0"></td>
+        <td colspan="6" class="bg-orange">Amount unaccounted for: ${sub.toFixed(2)}</td>
+        <td class="bg-white"></td><td class="bg-white"></td>
+      </tr>
+      <tr>
+        <td class="bg-white" colspan="3" style="padding-left:8px;font-style:italic;color:#888;font-size:11px">
+          &nbsp;&nbsp;&nbsp;&nbsp;Less: Discounts
+        </td>
+        <td style="background:#e0e8f0;padding:0"></td>
+        <td colspan="6" class="bg-white"></td><td class="bg-white"></td><td class="bg-white"></td>
+      </tr>
+      <tr>
+        <td class="bg-white"></td>
+        <td class="bg-white">VAT Adjustment</td>
+        <td class="bg-white" style="text-align:right">${vat !== null ? vat.toFixed(2) : ''}</td>
+        <td style="background:#e0e8f0;padding:0"></td>
+        <td colspan="6" class="bg-white" style="text-align:center;font-size:11px;color:#a0aab8">0.00 per person</td>
+        <td class="bg-white"></td><td class="bg-white"></td>
+      </tr>
+      <tr>
+        <td class="bg-white"></td>
+        <td class="bg-white">SC Discount (20%)</td>
+        <td class="bg-white" style="text-align:right">${scd !== null ? scd.toFixed(2) : ''}</td>
+        <td style="background:#e0e8f0;padding:0"></td>
+        <td colspan="6" class="bg-white" style="text-align:center;font-size:11px;color:#a0aab8">0.00 per person</td>
+        <td class="bg-white"></td><td class="bg-white"></td>
+      </tr>
+      <tr>
+        <td class="bg-grand" colspan="2" style="text-align:center">GRAND TOTAL</td>
+        <td class="bg-grand" style="text-align:right">${grand.toFixed(2)}</td>
+        <td style="background:#1C4587;padding:0"></td>
+        <td colspan="6" class="bg-grand" style="text-align:center">—</td>
+        <td class="bg-grand"></td><td class="bg-grand"></td>
+      </tr>
+    `;
+  }
+
+  function getNum(id) {
+    const v = document.getElementById(id).value;
+    return v !== '' ? parseFloat(v) : null;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function addRow() {
+    items.push({ qty: 1, name: '', unit_cost: 0 });
+    renderAll();
+    const rows = document.querySelectorAll('#itemsBody tr');
+    const last = rows[rows.length - 1];
+    if (last) last.querySelectorAll('input')[1].focus();
+  }
+
+  function downloadXlsx() {
+    const wb = XLSX.utils.book_new();
+    const ws = {};
+    const ALL_P = ['E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S'];
+    const PERSONS = ['Ace','Aerjay','Gabi','Rod','Norwyn','Lanz'];
+
+    function sc(addr, v, style) {
+      ws[addr] = { v, t: typeof v === 'number' ? 'n' : 's', s: style };
+    }
+
+    const blueHdr  = { fill:{fgColor:{rgb:'1155CC'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:11}, alignment:{horizontal:'center'} };
+    const blueSub  = { fill:{fgColor:{rgb:'1C4587'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const amberHdr = { fill:{fgColor:{rgb:'B45F06'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const tanCell  = { fill:{fgColor:{rgb:'FFF2CC'}}, font:{name:'Arial',sz:10} };
+    const subL     = { fill:{fgColor:{rgb:'C9DAF8'}}, font:{bold:true,name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const subR     = { fill:{fgColor:{rgb:'C9DAF8'}}, font:{bold:true,name:'Arial',sz:10}, alignment:{horizontal:'right'} };
+    const grandC   = { fill:{fgColor:{rgb:'1C4587'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const grandR   = { fill:{fgColor:{rgb:'1C4587'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:10}, alignment:{horizontal:'right'} };
+    const normL    = { font:{name:'Arial',sz:10} };
+    const normR    = { font:{name:'Arial',sz:10}, alignment:{horizontal:'right'} };
+    const normC    = { font:{name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const orSt     = { fill:{fgColor:{rgb:'F5A623'}}, font:{color:{rgb:'5A3000'},name:'Arial',sz:10} };
+
+    ws['!merges'] = [
+      {s:{r:0,c:4}, e:{r:0,c:18}},
+      {s:{r:22,c:0},e:{r:22,c:1}},
+      {s:{r:23,c:0},e:{r:23,c:1}},
+      {s:{r:26,c:0},e:{r:26,c:1}},
+    ];
+
+    ['A','B','C','D'].forEach(c => sc(c+'1','',blueSub));
+    sc('E1','ORDER BREAKDOWN',blueHdr);
+    for (let c=5;c<=18;c++) { const a=XLSX.utils.encode_cell({r:0,c}); if(!ws[a]) sc(a,'',blueHdr); }
+    sc('T1','',blueSub); sc('U1','',amberHdr);
+
+    ['A','B','C','D'].forEach(c => sc(c+'2', c==='A'?'Qty':c==='B'?'Item Name':c==='C'?'Unit Cost':'', blueSub));
+    PERSONS.forEach((p,i) => sc(['E','F','G','H','I','J'][i]+'2', p, blueSub));
+    for (let c=10;c<=18;c++) sc(XLSX.utils.encode_cell({r:1,c}),'',blueSub);
+    sc('T2','',blueSub); sc('U2','NOTES',amberHdr);
+
+    const DS=3, DE=22;
+    items.forEach((it,i) => {
+      const r = DS+i;
+      sc(`A${r}`, parseInt(it.qty)||1,           normC);
+      sc(`B${r}`, it.name||'',                   normL);
+      sc(`C${r}`, parseFloat(it.unit_cost)||0,   normR);
+      sc(`D${r}`, '',                             normL);
+      ALL_P.forEach(c => sc(`${c}${r}`,'',tanCell));
+      sc(`T${r}`,'',normL);
+      ws[`U${r}`] = { f:`IF(SUM($E${r}:$S${r})<>$A${r}," Not all orders for this item have been accounted for.","")`, t:'s', v:'' };
+    });
+    for (let r=DS+items.length; r<=DE; r++) {
+      ['A','B','C','D'].forEach(c => sc(`${c}${r}`,'',normL));
+      ALL_P.forEach(c => sc(`${c}${r}`,'',tanCell));
+      sc(`T${r}`,'',normL);
+      ws[`U${r}`] = { f:`IF(SUM($E${r}:$S${r})<>$A${r}," Not all orders for this item have been accounted for.","")`, t:'s', v:'' };
+    }
+
+    const SR=23;
+    sc(`A${SR}`,'SUBTOTAL',subL); sc(`B${SR}`,'',subL);
+    ws[`C${SR}`] = { f:`SUMPRODUCT($A$${DS}:$A$${DE},$C$${DS}:$C$${DE})`, t:'n', v:0, s:subR };
+    sc(`D${SR}`,'',subL);
+    ALL_P.forEach(c => { ws[`${c}${SR}`]={ f:`SUMPRODUCT(${c}$${DS}:${c}$${DE},$C$${DS}:$C$${DE})`, t:'n', v:0, s:subR }; });
+    sc(`T${SR}`,'',normL);
+    ws[`U${SR}`] = { f:`IF(SUM($E${SR}:$S${SR})<>$C${SR}," Amount unaccounted for: "&TEXT((C${SR}-SUM(E${SR}:S${SR})),"#,##0.00"),"")`, t:'s', v:'', s:orSt };
+
+    const LR=24;
+    sc(`A${LR}`,'    Less: Discounts',normL);
+    for (let c=1;c<=20;c++) sc(XLSX.utils.encode_cell({r:LR-1,c}),'',normL);
+
+    const vat = getNum('vatVal'), scd = getNum('scdVal');
+    const VR=25;
+    sc(`A${VR}`,'',normL); sc(`B${VR}`,'VAT Adjustment',normL);
+    if (vat !== null) sc(`C${VR}`,vat,normR); else sc(`C${VR}`,'',normL);
+    ALL_P.forEach(c => sc(`${c}${VR}`, vat!==null?0:'', normR));
+    sc(`D${VR}`,'',normL); sc(`T${VR}`,'',normL); sc(`U${VR}`,'',normL);
+
+    const SCR=26;
+    sc(`A${SCR}`,'',normL); sc(`B${SCR}`,'SC Discount (20%)',normL);
+    if (scd !== null) sc(`C${SCR}`,scd,normR); else sc(`C${SCR}`,'',normL);
+    ALL_P.forEach(c => sc(`${c}${SCR}`, scd!==null?0:'', normR));
+    sc(`D${SCR}`,'',normL); sc(`T${SCR}`,'',normL); sc(`U${SCR}`,'',normL);
+
+    const GR=27;
+    sc(`A${GR}`,'GRAND TOTAL',grandC); sc(`B${GR}`,'',grandC);
+    ws[`C${GR}`] = { f:`SUM(C${SR}:C${SCR})`, t:'n', v:0, s:grandR };
+    sc(`D${GR}`,'',grandC);
+    ALL_P.forEach(c => { ws[`${c}${GR}`]={ f:`SUM(${c}$${SR}:${c}$${SCR})`, t:'n', v:0, s:grandR }; });
+    sc(`T${GR}`,'',grandC); sc(`U${GR}`,'',grandC);
+
+    ws['!ref'] = `A1:U${GR}`;
+    ws['!cols'] = [
+      {wch:3.6},{wch:17},{wch:9.7},{wch:2.1},
+      {wch:7.6},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13},
+      {wch:13},{wch:13},{wch:13},{wch:13},{wch:13},
+      {wch:13},{wch:13},{wch:13},{wch:13},{wch:5},{wch:36}
+    ];
+    ws['!rows'] = [];
+    ws['!rows'][SR-1] = {hpt:20.25};
+    ws['!rows'][GR-1] = {hpt:20.25};
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, 'Din_Tai_Fung_order.xlsx');
+  }
+
+  function resetApp() {
+    imageBase64 = null; items = [];
+    document.getElementById('prevImg').classList.add('hidden');
+    document.getElementById('prevImg').src = '';
+    document.getElementById('parseBtn').disabled = true;
+    document.getElementById('reviewStep').classList.add('hidden');
+    document.getElementById('fi').value = '';
+    setStatus('');
+    ['scVal','vatVal','scdVal'].forEach(id => document.getElementById(id).value = '');
+  }
+</script>
+</body>
+</html>
