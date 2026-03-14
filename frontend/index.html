@@ -190,7 +190,7 @@
 <header>
   <div class="logo-box">🧾</div>
   <div>
-    <h1>Tigmagkano <span>by Norwyn</span></h1>
+    <h1>Tigmagkano</h1>
   </div>
 </header>
 
@@ -227,12 +227,12 @@
             <th class="bg-blue-sub">Item Name</th>
             <th class="bg-blue-sub" style="text-align:center">Unit Cost</th>
             <th style="background:#1C4587;border-color:#1C4587;padding:0"></th>
-            <th class="bg-blue-sub" style="text-align:center">Ace</th>
-            <th class="bg-blue-sub" style="text-align:center">Aerjay</th>
-            <th class="bg-blue-sub" style="text-align:center">Gabi</th>
-            <th class="bg-blue-sub" style="text-align:center">Rod</th>
-            <th class="bg-blue-sub" style="text-align:center">Norwyn</th>
-            <th class="bg-blue-sub" style="text-align:center">Lanz</th>
+            <th class="bg-blue-sub" style="text-align:center">Name 1</th>
+            <th class="bg-blue-sub" style="text-align:center">Name 2</th>
+            <th class="bg-blue-sub" style="text-align:center">Name 3</th>
+            <th class="bg-blue-sub" style="text-align:center">Name 4</th>
+            <th class="bg-blue-sub" style="text-align:center">Name 5</th>
+            <th class="bg-blue-sub" style="text-align:center">Name 6</th>
             <th class="bg-amber"></th>
             <th class="bg-blue-sub"></th>
           </tr>
@@ -262,13 +262,46 @@
       <button class="btn-sec" onclick="resetApp()">Start over</button>
       <button class="btn-dl" onclick="downloadXlsx()">⬇ Download .xlsx for Google Sheets</button>
     </div>
+
+    <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:8px">
+        <div style="font-size:11px;font-weight:600;color:#8899b5;text-transform:uppercase;letter-spacing:0.9px">Copy to template</div>
+        <a href="https://docs.google.com/spreadsheets/d/17NjdTholG5O66SmpdLzFgA8yQ429Z2NPKgpMlRARMrw/edit?usp=sharing"
+           target="_blank"
+           style="font-size:12px;color:#1C4587;text-decoration:none;display:inline-flex;align-items:center;gap:5px;border:1px solid #c5d3e8;border-radius:7px;padding:5px 10px;background:transparent">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 3H21V10" stroke="#1C4587" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 3L10 14" stroke="#1C4587" stroke-width="2" stroke-linecap="round"/>
+            <path d="M19 13V20C19 20.5523 18.5523 21 18 21H4C3.44772 21 3 20.5523 3 20V6C3 5.44772 3.44772 5 4 5H11" stroke="#1C4587" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Open Google Sheets template · by Pao Santos
+        </a>
+      </div>
+      <div style="font-size:12px;color:#8899b5;margin-bottom:8px">Copy the table below and paste it directly into the template.</div>
+      <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+        <table id="copyTable" style="border-collapse:collapse;width:100%;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif">
+          <thead>
+            <tr>
+              <th style="background:#1C4587;color:#fff;font-weight:600;padding:7px 12px;text-align:center;width:60px">Qty</th>
+              <th style="background:#1C4587;color:#fff;font-weight:600;padding:7px 12px;text-align:left">Item Name</th>
+              <th style="background:#1C4587;color:#fff;font-weight:600;padding:7px 12px;text-align:right;width:110px">Unit Cost</th>
+            </tr>
+          </thead>
+          <tbody id="copyTableBody"></tbody>
+        </table>
+      </div>
+      <button onclick="copyTable()" id="copyBtn"
+        style="margin-top:8px;font-size:12px;font-family:inherit;padding:6px 14px;border:1px solid var(--border);border-radius:7px;background:transparent;cursor:pointer;color:var(--text)">
+        Copy table
+      </button>
+    </div>
   </div>
 </main>
 
 <script>
   // ── CONFIG ──────────────────────────────────────────────────────────────────
   // Replace this with your actual API Gateway URL after deploying Lambda
-  const PROXY_URL = 'https://zxflznjmv7.execute-api.ap-southeast-1.amazonaws.com/prod/parse';
+  const PROXY_URL = 'https://YOUR_API_GATEWAY_ID.execute-api.YOUR_REGION.amazonaws.com/prod/parse';
   // ────────────────────────────────────────────────────────────────────────────
 
   let imageBase64 = null, imageMime = 'image/jpeg', items = [];
@@ -340,7 +373,38 @@
     }
   }
 
-  function renderAll() { renderBody(); renderFoot(); }
+  function renderAll() { renderBody(); renderFoot(); renderCopyTable(); }
+
+  function renderCopyTable() {
+    const tbody = document.getElementById('copyTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    items.forEach((it, i) => {
+      const tr = document.createElement('tr');
+      const bg = i % 2 === 0 ? '#fff' : '#f7f9fc';
+      tr.innerHTML = `
+        <td style="padding:6px 12px;text-align:center;background:${bg};border-bottom:0.5px solid #eef1f6">${parseInt(it.qty)||1}</td>
+        <td style="padding:6px 12px;background:${bg};border-bottom:0.5px solid #eef1f6">${escHtml(it.name||'')}</td>
+        <td style="padding:6px 12px;text-align:right;background:${bg};border-bottom:0.5px solid #eef1f6">${(parseFloat(it.unit_cost)||0).toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function copyTable() {
+    const rows = [['Qty', 'Item Name', 'Unit Cost']];
+    items.forEach(it => rows.push([parseInt(it.qty)||1, it.name||'', (parseFloat(it.unit_cost)||0).toFixed(2)]));
+    const text = rows.map(r => r.join('\t')).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copied!';
+      btn.style.color = '#1D9E75';
+      btn.style.borderColor = '#1D9E75';
+      setTimeout(() => { btn.textContent = 'Copy table'; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+    }).catch(() => {
+      alert('Copy failed — please select the table manually and copy.');
+    });
+  }
 
   function renderBody() {
     const tbody = document.getElementById('itemsBody');
@@ -444,7 +508,7 @@
     const wb = XLSX.utils.book_new();
     const ws = {};
     const ALL_P = ['E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S'];
-    const PERSONS = ['Ace','Aerjay','Gabi','Rod','Norwyn','Lanz'];
+    const PERSONS = ['Name 1','Name 2','Name 3','Name 4','Name 5','Name 6'];
 
     function sc(addr, v, style) {
       ws[addr] = { v, t: typeof v === 'number' ? 'n' : 's', s: style };
@@ -541,8 +605,10 @@
     ws['!rows'][SR-1] = {hpt:20.25};
     ws['!rows'][GR-1] = {hpt:20.25};
 
+    const now = new Date();
+    const fname = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}.xlsx`;
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-    XLSX.writeFile(wb, 'Din_Tai_Fung_order.xlsx');
+    XLSX.writeFile(wb, fname);
   }
 
   function resetApp() {
