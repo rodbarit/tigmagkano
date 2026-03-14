@@ -299,7 +299,7 @@
         </div>
         <div class="split-row hidden" id="split-row-${i}">
           <span>Split</span>
-          <input type="number" id="split-orders-${i}" min="1" value="1" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+          <input type="number" id="split-orders-${i}" min="1" max="${item.qty}" value="1" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
           <span>order(s) between</span>
           <input type="number" id="split-people-${i}" min="1" value="2" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
           <span>people</span>
@@ -341,7 +341,7 @@
           </div>
           <div class="split-row hidden" id="split-row-${i}">
             <span>Split</span>
-            <input type="number" id="split-orders-${i}" min="1" value="1" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+            <input type="number" id="split-orders-${i}" min="1" max="1" value="1" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
             <span>order(s) between</span>
             <input type="number" id="split-people-${i}" min="1" value="2" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
             <span>people</span>
@@ -374,7 +374,13 @@
   }
 
   function applySplit(i) {
-    const orders = parseFloat(document.getElementById(`split-orders-${i}`)?.value) || 1;
+    const maxOrders = parseFloat(order.items[i]?.qty || 1);
+    const ordersInput = document.getElementById(`split-orders-${i}`);
+    let orders = parseFloat(ordersInput?.value) || 1;
+    if (orders > maxOrders) {
+      orders = maxOrders;
+      if (ordersInput) ordersInput.value = maxOrders;
+    }
     const people = parseFloat(document.getElementById(`split-people-${i}`)?.value) || 1;
     const val = Math.round((orders / people) * 1000) / 1000;
     myQtys[i] = val;
@@ -399,6 +405,26 @@
   async function submitOrder() {
     const btn = document.getElementById('submitBtn');
     const st = document.getElementById('submitStatus');
+
+    // Validate: total assigned per item can't exceed item qty
+    for (let i = 0; i < order.items.length; i++) {
+      const item = order.items[i];
+      const maxQty = parseFloat(item.qty) || 1;
+      const myQty = myQtys[i] || 0;
+
+      // sum all existing assignments except mine
+      const othersTotal = Object.entries(item.assignments || {})
+        .filter(([n]) => n !== myName)
+        .reduce((s, [, q]) => s + parseFloat(q || 0), 0);
+
+      const newTotal = othersTotal + myQty;
+      if (newTotal > maxQty + 0.001) {
+        st.className = 'status error';
+        st.textContent = `"${item.name}" is over-assigned (${newTotal.toFixed(2)} of ${maxQty} ordered). Please reduce your quantity.`;
+        return;
+      }
+    }
+
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Saving...';
     st.className = 'status';
