@@ -390,7 +390,6 @@
     const tag = document.getElementById(`split-tag-${i}`);
     tag.textContent = `${orders} ÷ ${people} = ${val} each`;
     tag.classList.remove('hidden');
-    renderSummary();
   }
 
   function changeQty(i, delta) {
@@ -399,7 +398,6 @@
     document.getElementById(`qty-${i}`).style.color = '';
     const tag = document.getElementById(`split-tag-${i}`);
     if (tag) tag.classList.add('hidden');
-    renderSummary();
   }
 
   // ── SUBMIT ─────────────────────────────────────────────────────────────────
