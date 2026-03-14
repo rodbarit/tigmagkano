@@ -410,6 +410,7 @@
       st.className = 'status ok';
       st.textContent = '✓ Order saved!';
       renderParticipants();
+      renderItems();
       renderSummary();
     } catch (err) {
       st.className = 'status error';
@@ -421,92 +422,117 @@
   }
 
   // ── SUMMARY ────────────────────────────────────────────────────────────────
+  function getQty(item, i, n) {
+    if (n === myName && !order.names.includes(myName)) return myQtys[i] || 0;
+    return item.assignments?.[n] || 0;
+  }
+
   function renderSummary() {
     const container = document.getElementById('summaryContent');
-    if (!order || !order.names || !order.names.length) {
+    if (!order) return;
+
+    // include current user even if not yet saved
+    const allNames = [...new Set([...( order.names || []), ...(myName ? [myName] : [])])];
+
+    if (!allNames.length) {
       container.innerHTML = '<div class="empty-state">No orders submitted yet.</div>';
       return;
     }
 
-    const allNames = [...new Set([...order.names, ...(myName ? [myName] : [])])];
+    // separate food items from discount items
+    const foodItems = order.items.filter(it => !it.isDiscount);
+    const discItems = order.items.filter(it => it.isDiscount);
+
+    // also add vat/scd/pwd from order fields if not already in items
+    const vat = order.vat_adjustment || 0;
+    const scd = order.sc_discount || 0;
+    const pwd = order.pwd_discount || 0;
 
     let html = `<div style="overflow-x:auto"><table class="summary-table">
       <thead><tr>
+        <th style="width:40px;text-align:center">Qty</th>
         <th>Item</th>
-        <th class="r">Unit Cost</th>
+        <th class="r">Total</th>
         ${allNames.map(n => `<th class="r">${n === myName ? `<span style="color:#1C4587">${n}</span>` : n}</th>`).join('')}
       </tr></thead>
       <tbody>`;
 
-    order.items.forEach((item, i) => {
+    // food rows
+    foodItems.forEach((item, i) => {
+      const idx = order.items.indexOf(item);
+      const unitCost = parseFloat(item.unit_cost) || 0;
+      const qty = parseInt(item.qty) || 1;
+      const rowTotal = unitCost * qty;
       html += `<tr>
+        <td style="text-align:center;color:var(--muted);font-size:12px">${qty}</td>
         <td>${item.name}</td>
-        <td class="r">₱${parseFloat(item.unit_cost).toFixed(2)}</td>
+        <td class="r">₱${rowTotal.toFixed(2)}</td>
         ${allNames.map(n => {
-          const qty = (n === myName && !order.names.includes(myName))
-            ? (myQtys[i] || 0)
-            : (item.assignments?.[n] || 0);
-          const amt = qty * parseFloat(item.unit_cost);
-          return `<td class="r" style="color:${qty > 0 ? '#1a1a2e' : '#c0ccda'}">${qty > 0 ? '₱' + amt.toFixed(2) : '—'}</td>`;
+          const pQty = getQty(item, idx, n);
+          const amt = pQty * unitCost;
+          return `<td class="r" style="color:${pQty > 0 ? '#1a1a2e' : '#c0ccda'}">${pQty > 0 ? '₱'+amt.toFixed(2) : '—'}</td>`;
         }).join('')}
       </tr>`;
     });
 
-    // Totals per person
-    const totals = allNames.map(n => {
-      return order.items.reduce((sum, item, i) => {
-        const qty = (n === myName && !order.names.includes(myName))
-          ? (myQtys[i] || 0)
-          : (item.assignments?.[n] || 0);
-        return sum + qty * parseFloat(item.unit_cost);
+    // subtotal row — sumproduct of qty × unit_cost
+    const itemsSubtotal = foodItems.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
+    const personTotals = allNames.map(n => {
+      return foodItems.reduce((s, item, i) => {
+        const idx = order.items.indexOf(item);
+        return s + getQty(item, idx, n) * (parseFloat(item.unit_cost)||0);
       }, 0);
     });
 
-    const vat = order.vat_adjustment || 0;
-    const scd = order.sc_discount || 0;
-    const pwd = order.pwd_discount || 0;
-    const totalDiscount = vat + scd + pwd;
-    const subtotal = totals.reduce((a, b) => a + b, 0);
-    const vatPerPerson  = allNames.length > 0 ? vat / allNames.length : 0;
-    const scdPerPerson  = allNames.length > 0 ? scd / allNames.length : 0;
-    const pwdPerPerson  = allNames.length > 0 ? pwd / allNames.length : 0;
-    const totalPerPerson = vatPerPerson + scdPerPerson + pwdPerPerson;
-
     html += `</tbody><tfoot>
       <tr class="total-row" style="border-top:1px solid var(--border)">
+        <td></td>
         <td>Subtotal</td>
-        <td class="r">₱${subtotal.toFixed(2)}</td>
-        ${totals.map(t => `<td class="r">₱${t.toFixed(2)}</td>`).join('')}
+        <td class="r">₱${itemsSubtotal.toFixed(2)}</td>
+        ${personTotals.map(t => `<td class="r">₱${t.toFixed(2)}</td>`).join('')}
       </tr>`;
 
-    if (vat) {
+    // discount rows from vat/scd/pwd fields
+    const discountDefs = [];
+    if (vat) discountDefs.push({ label: 'VAT Adjustment', value: vat });
+    if (scd) discountDefs.push({ label: 'SC Discount', value: scd });
+    if (pwd) discountDefs.push({ label: 'PWD Discount', value: pwd });
+
+    discountDefs.forEach(d => {
+      // find matching item in order.items
+      const match = order.items.find(it => it.name === d.label);
       html += `<tr>
-        <td style="color:var(--muted);font-size:12px">VAT Adjustment</td>
-        <td class="r" style="color:var(--muted);font-size:12px">₱${vat.toFixed(2)}</td>
-        ${allNames.map(() => `<td class="r" style="color:var(--muted);font-size:12px">₱${vatPerPerson.toFixed(2)}</td>`).join('')}
+        <td style="text-align:center;color:#1D9E75;font-size:12px">1</td>
+        <td style="color:#1D9E75;font-size:12px">${d.label}</td>
+        <td class="r" style="color:#1D9E75;font-size:12px">₱${d.value.toFixed(2)}</td>
+        ${allNames.map(n => {
+          const qty = match ? getQty(match, order.items.indexOf(match), n) : 0;
+          const amt = qty * d.value;
+          return `<td class="r" style="color:${qty > 0 ? '#c0392b' : '#c0ccda'};font-size:12px">${qty > 0 ? '₱'+amt.toFixed(2) : '—'}</td>`;
+        }).join('')}
       </tr>`;
-    }
-    if (scd) {
-      html += `<tr>
-        <td style="color:var(--muted);font-size:12px">SC Discount</td>
-        <td class="r" style="color:var(--muted);font-size:12px">₱${scd.toFixed(2)}</td>
-        ${allNames.map(() => `<td class="r" style="color:var(--muted);font-size:12px">₱${scdPerPerson.toFixed(2)}</td>`).join('')}
-      </tr>`;
-    }
-    if (pwd) {
-      html += `<tr>
-        <td style="color:var(--muted);font-size:12px">PWD Discount</td>
-        <td class="r" style="color:var(--muted);font-size:12px">₱${pwd.toFixed(2)}</td>
-        ${allNames.map(() => `<td class="r" style="color:var(--muted);font-size:12px">₱${pwdPerPerson.toFixed(2)}</td>`).join('')}
-      </tr>`;
-    }
-    if (totalDiscount) {
-      html += `<tr class="total-row">
-        <td>Total to pay</td>
-        <td class="r">₱${(subtotal + totalDiscount).toFixed(2)}</td>
-        ${totals.map(t => `<td class="r" style="color:#1D9E75">₱${(t + totalPerPerson).toFixed(2)}</td>`).join('')}
-      </tr>`;
-    }
+    });
+
+    // total to pay
+    const grandTotal = itemsSubtotal + vat + scd + pwd;
+    const personGrand = personTotals.map((t, i) => {
+      let discShare = 0;
+      discountDefs.forEach(d => {
+        const match = order.items.find(it => it.name === d.label);
+        if (match) {
+          const qty = getQty(match, order.items.indexOf(match), allNames[i]);
+          discShare += qty * d.value;
+        }
+      });
+      return t + discShare;
+    });
+
+    html += `<tr class="total-row">
+      <td></td>
+      <td>Total to pay</td>
+      <td class="r">₱${grandTotal.toFixed(2)}</td>
+      ${personGrand.map(t => `<td class="r" style="color:#1D9E75">₱${t.toFixed(2)}</td>`).join('')}
+    </tr>`;
 
     html += `</tfoot></table></div>`;
     container.innerHTML = html;
