@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tigmagkano — Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --blue-dark: #1C4587;
+    --blue-hdr:  #1155CC;
+    --amber:     #B45F06;
+    --tan:       #FFF2CC;
+    --subtotal:  #C9DAF8;
+    --bg:        #f0f4fa;
+    --card:      #ffffff;
+    --border:    #dde5f0;
+    --text:      #1a1a2e;
+    --muted:     #5a6a80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--blue-dark); color: #fff;
+    padding: 0.9rem 2rem; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 2px 12px rgba(28,69,135,0.2);
+  }
+  .logo-box {
+    width: 36px; height: 36px; background: rgba(255,255,255,0.15);
+    border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+
+  main { max-width: 680px; margin: 2rem auto; padding: 0 1.25rem 4rem; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 1.25rem;
+  }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 1rem; }
+  .step-label {
+    font-size: 11px; font-weight: 600; color: #8899b5;
+    text-transform: uppercase; letter-spacing: 0.9px; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .step-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--blue-dark); color: #fff;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .name-row { display: flex; gap: 10px; }
+  .name-row input {
+    flex: 1; font-size: 14px; font-family: inherit;
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px;
+    background: #fff; color: var(--text); transition: border-color 0.15s;
+  }
+  .name-row input:focus { outline: none; border-color: var(--blue-dark); }
+  .name-row button {
+    padding: 8px 18px; font-size: 13px; font-weight: 600; font-family: inherit;
+    background: var(--blue-dark); color: #fff; border: none; border-radius: 10px; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .name-row button:hover { opacity: 0.85; }
+
+  .participants { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.75rem; }
+  .participant-badge {
+    font-size: 12px; padding: 4px 12px; border-radius: 20px;
+    background: #e8eef8; color: var(--blue-dark); font-weight: 500;
+    border: 1px solid #c5d3e8;
+  }
+  .participant-badge.me { background: var(--blue-dark); color: #fff; border-color: var(--blue-dark); }
+
+  .items-list { display: flex; flex-direction: column; gap: 10px; }
+  .item-info { flex: 1; }
+  .item-name { font-size: 14px; font-weight: 500; }
+  .item-cost { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .item-qty { display: flex; align-items: center; gap: 8px; }
+  .qty-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--border); background: #fff;
+    font-size: 16px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; color: var(--blue-dark);
+    transition: background 0.1s;
+  }
+  .qty-btn:hover { background: #e8eef8; }
+  .qty-num { font-size: 15px; font-weight: 600; min-width: 24px; text-align: center; }
+
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .summary-table th { text-align: left; padding: 6px 8px; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid var(--border); }
+  .summary-table td { padding: 8px; border-bottom: 0.5px solid #eef1f6; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table .r { text-align: right; }
+  .summary-table .total-row td { font-weight: 600; padding-top: 12px; }
+
+  .submit-btn {
+    width: 100%; padding: 0.8rem; font-size: 15px; font-weight: 600; font-family: inherit;
+    background: #1D9E75; color: #fff; border: none; border-radius: 10px;
+    cursor: pointer; transition: opacity 0.15s, transform 0.1s; margin-top: 1rem;
+  }
+  .submit-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .dl-btn {
+    width: 100%; padding: 0.8rem; font-size: 15px; font-weight: 600; font-family: inherit;
+    background: var(--blue-dark); color: #fff; border: none; border-radius: 10px;
+    cursor: pointer; transition: opacity 0.15s; margin-top: 0.75rem;
+  }
+  .dl-btn:hover { opacity: 0.88; }
+
+  .status { font-size: 13px; color: var(--muted); text-align: center; margin-top: 0.6rem; min-height: 18px; }
+  .status.ok { color: #1D9E75; }
+  .status.error { color: #c0392b; }
+
+  .spinner {
+    display: inline-block; width: 13px; height: 13px;
+    border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .empty-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 14px; }
+
+  .item-row { padding: 10px 14px; background: #f7f9fc; border-radius: 10px; border: 1px solid var(--border); transition: border-color 0.15s, background 0.15s; }
+  .item-top { display: flex; align-items: center; gap: 12px; }
+  .split-btn { font-size: 11px; font-weight: 600; color: #B45F06; background: #fff8ee; border: 1px solid #f0d090; border-radius: 6px; padding: 4px 10px; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .split-btn:hover { background: #fff0d0; }
+  .split-row { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0e8f0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .apply-btn { font-size: 11px; font-weight: 600; background: #1C4587; color: #fff; border: none; border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+  .apply-btn:hover { opacity: 0.85; }
+  .split-tag { font-size: 11px; background: #fff8ee; color: #B45F06; border: 1px solid #f0d090; border-radius: 6px; padding: 2px 8px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-box">🧾</div>
+  <div><h1>Tigmagkano</h1></div>
+</header>
+
+<main>
+  <!-- Loading -->
+  <div id="loadingState" class="card" style="text-align:center;padding:3rem">
+    <div style="font-size:14px;color:var(--muted)">Loading order...</div>
+  </div>
+
+  <!-- Error -->
+  <div id="errorState" class="card hidden" style="text-align:center;padding:3rem">
+    <div style="font-size:32px;margin-bottom:1rem">😕</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:0.5rem">Order not found</div>
+    <div style="font-size:13px;color:var(--muted)">This link may be invalid or expired.</div>
+  </div>
+
+  <!-- Main content -->
+  <div id="mainContent" class="hidden fade-in">
+
+    <!-- Step 1: Enter name -->
+    <div class="card" id="nameStep">
+      <div class="step-label"><span class="step-num">1</span> Who are you?</div>
+      <div class="name-row">
+        <input type="text" id="nameInput" placeholder="Enter your name" onkeydown="if(event.key==='Enter')setName()">
+        <button onclick="setName()">Continue</button>
+      </div>
+      <div class="participants" id="participantsList"></div>
+    </div>
+
+    <!-- Step 2: Enter quantities -->
+    <div class="card hidden" id="orderStep">
+      <div class="step-label"><span class="step-num">2</span> What did you order? <span id="orderingAs" style="font-size:12px;color:#1C4587;font-weight:600;margin-left:4px"></span></div>
+      <div class="items-list" id="itemsList"></div>
+      <button class="submit-btn" id="submitBtn" onclick="submitOrder()">Save my order</button>
+      <div class="status" id="submitStatus"></div>
+    </div>
+
+    <!-- Step 3: Summary -->
+    <div class="card hidden fade-in" id="summaryStep">
+      <div class="step-label">Order summary</div>
+      <div id="summaryContent"></div>
+      <button class="dl-btn" onclick="downloadXlsx()">⬇ Download .xlsx</button>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  const ORDERS_URL = 'https://zxflznjmv7.execute-api.ap-southeast-1.amazonaws.com/prod/order';
+
+  let orderId = null;
+  let order = null;
+  let myName = null;
+  let myQtys = [];
+
+  // ── INIT ───────────────────────────────────────────────────────────────────
+  window.onload = async () => {
+    const params = new URLSearchParams(window.location.search);
+    orderId = params.get('id');
+    if (!orderId) { showError(); return; }
+    await loadOrder();
+  };
+
+  async function loadOrder() {
+    try {
+      const res = await fetch(`${ORDERS_URL}/${orderId}`);
+      if (!res.ok) { showError(); return; }
+      order = await res.json();
+      myQtys = order.items.map(() => 0);
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+      renderParticipants();
+    } catch {
+      showError();
+    }
+  }
+
+  function showError() {
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('errorState').classList.remove('hidden');
+  }
+
+  // ── NAME STEP ──────────────────────────────────────────────────────────────
+  function setName() {
+    const input = document.getElementById('nameInput');
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    myName = name;
+    document.getElementById('orderingAs').textContent = `— ordering as ${myName}`;
+    document.getElementById('nameStep').style.opacity = '0.6';
+    document.getElementById('nameStep').style.pointerEvents = 'none';
+    document.getElementById('orderStep').classList.remove('hidden');
+    renderItems();
+    renderSummary();
+    document.getElementById('summaryStep').classList.remove('hidden');
+  }
+
+  function renderParticipants() {
+    const list = document.getElementById('participantsList');
+    list.innerHTML = '';
+    if (!order.names || !order.names.length) {
+      list.innerHTML = '<div style="font-size:12px;color:#aab5c8;margin-top:4px">No one has submitted yet — be the first!</div>';
+      return;
+    }
+    order.names.forEach(n => {
+      const badge = document.createElement('span');
+      badge.className = 'participant-badge' + (n === myName ? ' me' : '');
+      badge.textContent = n === myName ? `${n} (you)` : n;
+      list.appendChild(badge);
+    });
+  }
+
+  // ── ORDER STEP ─────────────────────────────────────────────────────────────
+  function getDiscountItems() {
+    const discounts = [];
+    const vat = order.vat_adjustment;
+    const scd = order.sc_discount;
+    const pwd = order.pwd_discount;
+    if (vat != null) discounts.push({ name: 'VAT Adjustment', unit_cost: vat, qty: 1, isDiscount: true });
+    if (scd != null) discounts.push({ name: 'SC Discount', unit_cost: scd, qty: 1, isDiscount: true });
+    if (pwd != null) discounts.push({ name: 'PWD Discount', unit_cost: pwd, qty: 1, isDiscount: true });
+    return discounts;
+  }
+
+  function renderItems() {
+    const list = document.getElementById('itemsList');
+    list.innerHTML = '';
+
+    // Add divider before discounts
+    const allItems = [...order.items];
+    const discountItems = getDiscountItems();
+    const discountStartIdx = allItems.length;
+
+    // Render food items
+    order.items.forEach((item, i) => {
+      const existing = myName && item.assignments && item.assignments[myName] ? item.assignments[myName] : 0;
+      myQtys[i] = existing;
+      const div = document.createElement('div');
+      div.className = 'item-row';
+      div.id = `item-row-${i}`;
+      div.innerHTML = `
+        <div class="item-top">
+          <div class="item-info">
+            <div class="item-name">${item.name}</div>
+            <div class="item-cost">₱${parseFloat(item.unit_cost).toFixed(2)} each · ${item.qty} ordered</div>
+          </div>
+          <div class="item-qty">
+            <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
+            <div class="qty-num" id="qty-${i}">${existing % 1 === 0 ? existing : existing}</div>
+            <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
+          </div>
+          <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>
+        </div>
+        <div class="split-row hidden" id="split-row-${i}">
+          <span>Split with how many people?</span>
+          <input type="number" id="split-input-${i}" min="1" value="2" style="width:48px;font-size:13px;font-weight:600;padding:4px 8px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+          <button class="apply-btn" onclick="applySplit(${i})">Apply</button>
+          <span class="split-tag hidden" id="split-tag-${i}"></span>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+
+    // Render discount items if any
+    if (discountItems.length > 0) {
+      const divider = document.createElement('div');
+      divider.style.cssText = 'font-size:10px;font-weight:700;color:#8899b5;text-transform:uppercase;letter-spacing:0.9px;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid #eef1f6';
+      divider.textContent = 'Discounts';
+      list.appendChild(divider);
+
+      discountItems.forEach((item, di) => {
+        const i = discountStartIdx + di;
+        if (myQtys[i] === undefined) myQtys[i] = 0;
+        const existing = myQtys[i];
+        const div = document.createElement('div');
+        div.className = 'item-row';
+        div.id = 'item-row-' + i;
+        div.style.background = '#f0f7f4';
+        div.style.borderColor = '#b8e0d0';
+        div.innerHTML = `
+          <div class="item-top">
+            <div class="item-info">
+              <div class="item-name">${item.name}</div>
+              <div class="item-cost" style="color:#1D9E75">${parseFloat(item.unit_cost).toFixed(2)} total</div>
+            </div>
+            <div class="item-qty">
+              <button class="qty-btn" onclick="changeQty(${i}, -1)" style="color:#1D9E75;border-color:#b8e0d0">-</button>
+              <div class="qty-num" id="qty-${i}">${existing}</div>
+              <button class="qty-btn" onclick="changeQty(${i}, 1)" style="color:#1D9E75;border-color:#b8e0d0">+</button>
+            </div>
+            <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})" style="color:#1D9E75;border-color:#1D9E75">Split</button>
+          </div>
+          <div class="split-row hidden" id="split-row-${i}">
+            <span>Split with how many people?</span>
+            <input type="number" id="split-input-${i}" min="1" value="2" style="width:48px;font-size:13px;font-weight:600;padding:4px 8px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
+            <button class="apply-btn" onclick="applySplit(${i})" style="background:#1D9E75">Apply</button>
+            <span class="split-tag hidden" id="split-tag-${i}" style="background:#1D9E75"></span>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+  }
+
+  function toggleSplit(i) {
+    const row = document.getElementById(`split-row-${i}`);
+    const btn = document.getElementById(`split-btn-${i}`);
+    const itemRow = document.getElementById(`item-row-${i}`);
+    const isOpen = !row.classList.contains('hidden');
+    if (isOpen) {
+      row.classList.add('hidden');
+      itemRow.style.borderColor = '';
+      itemRow.style.background = '';
+      btn.style.background = '';
+    } else {
+      row.classList.remove('hidden');
+      itemRow.style.borderColor = '#f0d090';
+      itemRow.style.background = '#fffdf5';
+      btn.style.background = '#fff0d0';
+      document.getElementById(`split-input-${i}`).focus();
+    }
+  }
+
+  function applySplit(i) {
+    const n = parseInt(document.getElementById(`split-input-${i}`).value) || 1;
+    const val = Math.round((1 / n) * 1000) / 1000;
+    myQtys[i] = val;
+    const display = val % 1 === 0 ? val : val;
+    document.getElementById(`qty-${i}`).textContent = val;
+    document.getElementById(`qty-${i}`).style.color = '#B45F06';
+    const tag = document.getElementById(`split-tag-${i}`);
+    tag.textContent = `÷${n} = ${val} each`;
+    tag.classList.remove('hidden');
+    renderSummary();
+  }
+
+  function changeQty(i, delta) {
+    myQtys[i] = Math.max(0, Math.round(((myQtys[i] || 0) + delta) * 1000) / 1000);
+    document.getElementById(`qty-${i}`).textContent = myQtys[i];
+    document.getElementById(`qty-${i}`).style.color = '';
+    const tag = document.getElementById(`split-tag-${i}`);
+    if (tag) tag.classList.add('hidden');
+    renderSummary();
+  }
+
+  // ── SUBMIT ─────────────────────────────────────────────────────────────────
+  async function submitOrder() {
+    const btn = document.getElementById('submitBtn');
+    const st = document.getElementById('submitStatus');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Saving...';
+    st.className = 'status';
+    st.textContent = '';
+
+    try {
+      const res = await fetch(`${ORDERS_URL}/${orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: myName, assignments: myQtys })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      order = data;
+      st.className = 'status ok';
+      st.textContent = '✓ Order saved!';
+      renderParticipants();
+      renderSummary();
+    } catch (err) {
+      st.className = 'status error';
+      st.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.innerHTML = 'Save my order';
+      btn.disabled = false;
+    }
+  }
+
+  // ── SUMMARY ────────────────────────────────────────────────────────────────
+  function renderSummary() {
+    const container = document.getElementById('summaryContent');
+    if (!order || !order.names || !order.names.length) {
+      container.innerHTML = '<div class="empty-state">No orders submitted yet.</div>';
+      return;
+    }
+
+    const allNames = [...new Set([...order.names, ...(myName ? [myName] : [])])];
+
+    let html = `<div style="overflow-x:auto"><table class="summary-table">
+      <thead><tr>
+        <th>Item</th>
+        <th class="r">Unit Cost</th>
+        ${allNames.map(n => `<th class="r">${n === myName ? `<span style="color:#1C4587">${n}</span>` : n}</th>`).join('')}
+      </tr></thead>
+      <tbody>`;
+
+    order.items.forEach((item, i) => {
+      html += `<tr>
+        <td>${item.name}</td>
+        <td class="r">₱${parseFloat(item.unit_cost).toFixed(2)}</td>
+        ${allNames.map(n => {
+          const qty = (n === myName && !order.names.includes(myName))
+            ? (myQtys[i] || 0)
+            : (item.assignments?.[n] || 0);
+          const amt = qty * parseFloat(item.unit_cost);
+          return `<td class="r" style="color:${qty > 0 ? '#1a1a2e' : '#c0ccda'}">${qty > 0 ? '₱' + amt.toFixed(2) : '—'}</td>`;
+        }).join('')}
+      </tr>`;
+    });
+
+    // Totals per person
+    const totals = allNames.map(n => {
+      return order.items.reduce((sum, item, i) => {
+        const qty = (n === myName && !order.names.includes(myName))
+          ? (myQtys[i] || 0)
+          : (item.assignments?.[n] || 0);
+        return sum + qty * parseFloat(item.unit_cost);
+      }, 0);
+    });
+
+    const vat = order.vat_adjustment || 0;
+    const scd = order.sc_discount || 0;
+    const subtotal = totals.reduce((a, b) => a + b, 0);
+    const discountPerPerson = allNames.length > 0 ? (vat + scd) / allNames.length : 0;
+
+    html += `</tbody><tfoot>
+      <tr class="total-row" style="border-top:1px solid var(--border)">
+        <td>Subtotal</td>
+        <td class="r">₱${subtotal.toFixed(2)}</td>
+        ${totals.map(t => `<td class="r">₱${t.toFixed(2)}</td>`).join('')}
+      </tr>`;
+
+    if (vat || scd) {
+      html += `<tr>
+        <td style="color:var(--muted);font-size:12px">VAT + SC Discount</td>
+        <td class="r" style="color:var(--muted);font-size:12px">₱${(vat+scd).toFixed(2)}</td>
+        ${allNames.map(() => `<td class="r" style="color:var(--muted);font-size:12px">₱${discountPerPerson.toFixed(2)}</td>`).join('')}
+      </tr>
+      <tr class="total-row">
+        <td>Total to pay</td>
+        <td class="r">₱${(subtotal + vat + scd).toFixed(2)}</td>
+        ${totals.map(t => `<td class="r" style="color:#1D9E75">₱${(t + discountPerPerson).toFixed(2)}</td>`).join('')}
+      </tr>`;
+    }
+
+    html += `</tfoot></table></div>`;
+    container.innerHTML = html;
+  }
+
+  // ── DOWNLOAD XLSX ──────────────────────────────────────────────────────────
+  function downloadXlsx() {
+    const wb = XLSX.utils.book_new();
+    const ws = {};
+    const ALL_P = ['E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S'];
+    const names = order.names || [];
+
+    function sc(addr, v, style) {
+      ws[addr] = { v, t: typeof v === 'number' ? 'n' : 's', s: style };
+    }
+
+    const blueHdr  = { fill:{fgColor:{rgb:'1155CC'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:11}, alignment:{horizontal:'center'} };
+    const blueSub  = { fill:{fgColor:{rgb:'1C4587'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const amberHdr = { fill:{fgColor:{rgb:'B45F06'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const tanCell  = { fill:{fgColor:{rgb:'FFF2CC'}}, font:{name:'Arial',sz:10} };
+    const subL     = { fill:{fgColor:{rgb:'C9DAF8'}}, font:{bold:true,name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const subR     = { fill:{fgColor:{rgb:'C9DAF8'}}, font:{bold:true,name:'Arial',sz:10}, alignment:{horizontal:'right'} };
+    const grandC   = { fill:{fgColor:{rgb:'1C4587'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const grandR   = { fill:{fgColor:{rgb:'1C4587'}}, font:{color:{rgb:'FFFFFF'},bold:true,name:'Arial',sz:10}, alignment:{horizontal:'right'} };
+    const normL    = { font:{name:'Arial',sz:10} };
+    const normR    = { font:{name:'Arial',sz:10}, alignment:{horizontal:'right'} };
+    const normC    = { font:{name:'Arial',sz:10}, alignment:{horizontal:'center'} };
+    const orSt     = { fill:{fgColor:{rgb:'F5A623'}}, font:{color:{rgb:'5A3000'},name:'Arial',sz:10} };
+
+    ws['!merges'] = [
+      {s:{r:0,c:4}, e:{r:0,c:18}},
+      {s:{r:22,c:0},e:{r:22,c:1}},
+      {s:{r:23,c:0},e:{r:23,c:1}},
+      {s:{r:26,c:0},e:{r:26,c:1}},
+    ];
+
+    ['A','B','C','D'].forEach(c => sc(c+'1','',blueSub));
+    sc('E1','ORDER BREAKDOWN',blueHdr);
+    for (let c=5;c<=18;c++) { const a=XLSX.utils.encode_cell({r:0,c}); if(!ws[a]) sc(a,'',blueHdr); }
+    sc('T1','',blueSub); sc('U1','',amberHdr);
+
+    ['A','B','C','D'].forEach(c => sc(c+'2', c==='A'?'Qty':c==='B'?'Item Name':c==='C'?'Unit Cost':'', blueSub));
+    names.forEach((n,i) => { if (i < 6) sc(ALL_P[i]+'2', n, blueSub); });
+    for (let c=names.length;c<15;c++) sc(ALL_P[c]+'2','',blueSub);
+    sc('T2','',blueSub); sc('U2','NOTES',amberHdr);
+
+    const DS=3, DE=22;
+    order.items.forEach((it, i) => {
+      const r = DS+i;
+      sc(`A${r}`, parseInt(it.qty)||1, normC);
+      sc(`B${r}`, it.name||'', normL);
+      sc(`C${r}`, parseFloat(it.unit_cost)||0, normR);
+      sc(`D${r}`, '', normL);
+      names.forEach((n, ni) => {
+        if (ni < 15) {
+          const qty = it.assignments?.[n] || 0;
+          sc(ALL_P[ni]+r, qty || '', qty ? normC : tanCell);
+        }
+      });
+      for (let c=names.length;c<15;c++) sc(ALL_P[c]+r,'',tanCell);
+      sc(`T${r}`,'',normL);
+      ws[`U${r}`] = { f:`IF(SUM($E${r}:$S${r})<>$A${r}," Not all orders for this item have been accounted for.","")`, t:'s', v:'' };
+    });
+    for (let r=DS+order.items.length; r<=DE; r++) {
+      ['A','B','C','D'].forEach(c => sc(`${c}${r}`,'',normL));
+      ALL_P.forEach(c => sc(`${c}${r}`,'',tanCell));
+      sc(`T${r}`,'',normL);
+      ws[`U${r}`] = { f:`IF(SUM($E${r}:$S${r})<>$A${r}," Not all orders for this item have been accounted for.","")`, t:'s', v:'' };
+    }
+
+    const SR=23;
+    sc(`A${SR}`,'SUBTOTAL',subL); sc(`B${SR}`,'',subL);
+    ws[`C${SR}`] = { f:`SUMPRODUCT($A$${DS}:$A$${DE},$C$${DS}:$C$${DE})`, t:'n', v:0, s:subR };
+    sc(`D${SR}`,'',subL);
+    ALL_P.forEach(c => { ws[`${c}${SR}`]={ f:`SUMPRODUCT(${c}$${DS}:${c}$${DE},$C$${DS}:$C$${DE})`, t:'n', v:0, s:subR }; });
+    sc(`T${SR}`,'',normL);
+    ws[`U${SR}`] = { f:`IF(SUM($E${SR}:$S${SR})<>$C${SR}," Amount unaccounted for: "&TEXT((C${SR}-SUM(E${SR}:S${SR})),"#,##0.00"),"")`, t:'s', v:'', s:orSt };
+
+    const LR=24;
+    sc(`A${LR}`,'    Less: Discounts',normL);
+    for (let c=1;c<=20;c++) sc(XLSX.utils.encode_cell({r:LR-1,c}),'',normL);
+
+    const vat = order.vat_adjustment, scd = order.sc_discount;
+    const VR=25;
+    sc(`A${VR}`,'',normL); sc(`B${VR}`,'VAT Adjustment',normL);
+    if (vat != null) sc(`C${VR}`,vat,normR); else sc(`C${VR}`,'',normL);
+    ALL_P.forEach(c => sc(`${c}${VR}`, vat!=null?0:'', normR));
+    sc(`D${VR}`,'',normL); sc(`T${VR}`,'',normL); sc(`U${VR}`,'',normL);
+
+    const SCR=26;
+    sc(`A${SCR}`,'',normL); sc(`B${SCR}`,'SC Discount',normL);
+    if (scd != null) sc(`C${SCR}`,scd,normR); else sc(`C${SCR}`,'',normL);
+    ALL_P.forEach(c => sc(`${c}${SCR}`, scd!=null?0:'', normR));
+    sc(`D${SCR}`,'',normL); sc(`T${SCR}`,'',normL); sc(`U${SCR}`,'',normL);
+
+    const GR=27;
+    sc(`A${GR}`,'GRAND TOTAL',grandC); sc(`B${GR}`,'',grandC);
+    ws[`C${GR}`] = { f:`SUM(C${SR}:C${SCR})`, t:'n', v:0, s:grandR };
+    sc(`D${GR}`,'',grandC);
+    ALL_P.forEach(c => { ws[`${c}${GR}`]={ f:`SUM(${c}$${SR}:${c}$${SCR})`, t:'n', v:0, s:grandR }; });
+    sc(`T${GR}`,'',grandC); sc(`U${GR}`,'',grandC);
+
+    ws['!ref'] = `A1:U${GR}`;
+    ws['!cols'] = [
+      {wch:3.6},{wch:17},{wch:9.7},{wch:2.1},
+      {wch:7.6},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13},
+      {wch:13},{wch:13},{wch:13},{wch:13},{wch:13},
+      {wch:13},{wch:13},{wch:13},{wch:13},{wch:5},{wch:36}
+    ];
+    ws['!rows'] = [];
+    ws['!rows'][SR-1] = {hpt:20.25};
+    ws['!rows'][GR-1] = {hpt:20.25};
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    const now = new Date();
+    const fname = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}.xlsx`;
+    XLSX.writeFile(wb, fname);
+  }
+</script>
+</body>
+</html>
