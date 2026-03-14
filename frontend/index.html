@@ -255,6 +255,13 @@
       </div>
     </div>
 
+    <div style="margin-bottom:0.75rem">
+      <button onclick="shareOrder()" id="shareBtn"
+        style="width:100%;padding:0.75rem;font-size:14px;font-weight:600;font-family:inherit;background:#1C4587;color:#fff;border:none;border-radius:10px;cursor:pointer;transition:opacity 0.15s"
+        onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+        🔗 Generate shareable link
+      </button>
+    </div>
     <div id="shareResult" style="display:none;margin-bottom:1rem;padding:1rem 1.25rem;background:#e8f4ff;border-radius:12px;border:1.5px solid #1C4587">
       <div style="font-size:11px;color:#1C4587;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px">🔗 Shareable link — send this to your group</div>
       <div style="display:flex;gap:8px;align-items:center">
@@ -385,7 +392,6 @@
       renderAll();
       document.getElementById('reviewStep').classList.remove('hidden');
       setStatus(`✓ Parsed ${items.length} item${items.length !== 1 ? 's' : ''}. Review and edit below.`, 'ok');
-      shareOrder();
     } catch (err) {
       setStatus('Error: ' + err.message, 'error');
     } finally {
@@ -394,7 +400,12 @@
     }
   }
 
-  function renderAll() { renderBody(); renderFoot(); renderCopyTable(); }
+  function renderAll() {
+    renderBody(); renderFoot(); renderCopyTable();
+    // hide stale share link when items change
+    document.getElementById('shareResult').style.display = 'none';
+    document.getElementById('shareLink').value = '';
+  }
 
   function renderCopyTable() {
     const tbody = document.getElementById('copyTableBody');
@@ -662,6 +673,8 @@
   }
 
   async function shareOrder() {
+    const btn = document.getElementById('shareBtn');
+    if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
     try {
       const res = await fetch(ORDERS_URL, {
         method: 'POST',
@@ -675,6 +688,8 @@
       document.getElementById('shareResult').style.display = 'block';
     } catch (err) {
       setStatus('Error generating link: ' + err.message, 'error');
+    } finally {
+      if (btn) { btn.textContent = '🔗 Generate shareable link'; btn.disabled = false; }
     }
   }
 
