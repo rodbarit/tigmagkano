@@ -433,7 +433,15 @@
       const res = await fetch(`${ORDERS_URL}/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: myName, assignments: myQtys })
+        body: JSON.stringify({
+          name: myName,
+          assignments: myQtys.slice(0, order.items.length),
+          discountAssignments: {
+            vat: myQtys[order.items.length] || 0,
+            sc: myQtys[order.items.length + 1] || 0,
+            pwd: myQtys[order.items.length + 2] || 0
+          }
+        })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -502,7 +510,7 @@
         <td style="text-align:center;color:var(--muted);font-size:12px">${qty}</td>
         <td>${item.name}</td>
         <td class="r">₱${rowTotal.toFixed(2)}</td>
-        <td class="r" style="color:${unassigned > 0 ? '#E67E22' : '#1D9E75'};font-weight:${unassigned > 0 ? '600' : '400'}">${unassigned > 0 ? unassigned + ' (₱'+unassignedAmt.toFixed(2)+')' : '✓'}</td>
+        <td class="r" style="color:${unassigned > 0 ? '#E67E22' : '#1D9E75'};font-weight:${unassigned > 0 ? '600' : '400'}">${unassigned > 0 ? '₱'+unassignedAmt.toFixed(2) : '✓'}</td>
         ${allNames.map(n => {
           const pQty = getQty(item, idx, n);
           const amt = pQty * unitCost;
@@ -531,24 +539,26 @@
 
     // discount rows from vat/scd/pwd fields
     const discountDefs = [];
-    if (vat) discountDefs.push({ label: 'VAT Adjustment', value: vat });
-    if (scd) discountDefs.push({ label: 'SC Discount', value: scd });
-    if (pwd) discountDefs.push({ label: 'PWD Discount', value: pwd });
+    if (vat) discountDefs.push({ label: 'VAT Adjustment', value: vat, key: 'vat' });
+    if (scd) discountDefs.push({ label: 'SC Discount', value: scd, key: 'sc' });
+    if (pwd) discountDefs.push({ label: 'PWD Discount', value: pwd, key: 'pwd' });
 
     discountDefs.forEach(d => {
+      // find matching item in order.items by name
       const match = order.items.find(it => it.name === d.label);
       const totalDiscAssigned = allNames.reduce((s, n) => {
-        const qty = match ? getQty(match, order.items.indexOf(match), n) : 0;
+        const qty = match ? (getQty(match, order.items.indexOf(match), n) || 0) : 0;
         return s + qty;
       }, 0);
       const discUnassigned = Math.round((1 - totalDiscAssigned) * 1000) / 1000;
+      const discUnassignedAmt = discUnassigned * Math.abs(d.value);
       html += `<tr>
         <td style="text-align:center;color:#1D9E75;font-size:12px">1</td>
         <td style="color:#1D9E75;font-size:12px">${d.label}</td>
         <td class="r" style="color:#1D9E75;font-size:12px">₱${d.value.toFixed(2)}</td>
-        <td class="r" style="color:${discUnassigned > 0 ? '#E67E22' : '#1D9E75'};font-size:12px;font-weight:${discUnassigned > 0 ? '600' : '400'}">${discUnassigned > 0 ? discUnassigned : '✓'}</td>
+        <td class="r" style="color:${discUnassigned > 0 ? '#E67E22' : '#1D9E75'};font-size:12px;font-weight:${discUnassigned > 0 ? '600' : '400'}">${discUnassigned > 0 ? '₱'+discUnassignedAmt.toFixed(2) : '✓'}</td>
         ${allNames.map(n => {
-          const qty = match ? getQty(match, order.items.indexOf(match), n) : 0;
+          const qty = match ? (getQty(match, order.items.indexOf(match), n) || 0) : 0;
           const amt = qty * d.value;
           return `<td class="r" style="color:${qty > 0 ? '#c0392b' : '#c0ccda'};font-size:12px">${qty > 0 ? '₱'+amt.toFixed(2) : '—'}</td>`;
         }).join('')}
@@ -558,13 +568,11 @@
     // total to pay
     const grandTotal = itemsSubtotal + vat + scd + pwd;
     const personGrand = personTotals.map((t, i) => {
+      const da = order.discount_assignments || {};
       let discShare = 0;
       discountDefs.forEach(d => {
-        const match = order.items.find(it => it.name === d.label);
-        if (match) {
-          const qty = getQty(match, order.items.indexOf(match), allNames[i]);
-          discShare += qty * d.value;
-        }
+        const qty = da[allNames[i]]?.[d.key] || 0;
+        discShare += qty * d.value;
       });
       return t + discShare;
     });
