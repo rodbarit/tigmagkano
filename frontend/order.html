@@ -54,7 +54,7 @@
     display: flex; align-items: center; justify-content: center;
   }
 
-  .name-row { display: flex; gap: 10px; }
+  .name-row { display: flex; gap: 10px; flex-wrap: wrap; }
   .name-row input {
     flex: 1; font-size: 14px; font-family: inherit;
     padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px;
@@ -106,6 +106,7 @@
   .submit-btn:hover { opacity: 0.88; transform: translateY(-1px); }
   .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
+  .summary-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .dl-btn {
     width: 100%; padding: 0.8rem; font-size: 15px; font-weight: 600; font-family: inherit;
     background: var(--blue-dark); color: #fff; border: none; border-radius: 10px;
@@ -131,7 +132,7 @@
   .empty-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 14px; }
 
   .item-row { padding: 10px 14px; background: #f7f9fc; border-radius: 10px; border: 1px solid var(--border); transition: border-color 0.15s, background 0.15s; }
-  .item-top { display: flex; align-items: center; gap: 12px; }
+  .item-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .split-btn { font-size: 11px; font-weight: 600; color: #B45F06; background: #fff8ee; border: 1px solid #f0d090; border-radius: 6px; padding: 4px 10px; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
   .split-btn:hover { background: #fff0d0; }
   .split-row { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0e8f0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
@@ -480,7 +481,7 @@
     const scd = order.sc_discount || 0;
     const pwd = order.pwd_discount || 0;
 
-    let html = `<div style="overflow-x:auto"><table class="summary-table">
+    let html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="summary-table" style="min-width:320px">
       <thead><tr>
         <th style="width:40px;text-align:center">Qty</th>
         <th>Item</th>
