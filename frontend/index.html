@@ -317,7 +317,6 @@
 
   function handleFile(e) { if (e.target.files[0]) loadFile(e.target.files[0]); }
   function loadFile(file) {
-    if (file.size > 5 * 1024 * 1024) { setStatus('Image too large — max 5MB.', 'error'); return; }
     imageMime = file.type || 'image/jpeg';
     const r = new FileReader();
     r.onload = e => {
