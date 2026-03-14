@@ -210,7 +210,17 @@
       <p class="upload-hint">JPG or PNG</p>
       <input type="file" id="fi" accept="image/jpeg,image/png,image/webp" onchange="handleFile(event)">
     </div>
-    <img id="prevImg" class="preview-img hidden" alt="Receipt preview">
+    <div id="imgContainer" style="text-align:center;margin-top:1rem;display:none">
+      <img id="prevImg" alt="Receipt preview"
+        style="max-height:200px;max-width:100%;border-radius:10px;border:1px solid var(--border);cursor:zoom-in;display:inline-block"
+        onclick="openLightbox()" title="Click to enlarge">
+      <div style="font-size:11px;color:#a0aab8;margin-top:4px">Tap to enlarge</div>
+    </div>
+    <!-- Lightbox -->
+    <div id="lightbox" onclick="closeLightbox()"
+      style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out">
+      <img id="lightboxImg" style="max-width:92%;max-height:92%;border-radius:10px;object-fit:contain">
+    </div>
     <button class="parse-btn" id="parseBtn" onclick="parseReceipt()" disabled>Parse receipt</button>
     <div class="status" id="status"></div>
   </div>
@@ -352,11 +362,23 @@
       imageBase64 = e.target.result.split(',')[1];
       const img = document.getElementById('prevImg');
       img.src = e.target.result;
-      img.classList.remove('hidden');
+      document.getElementById('lightboxImg').src = e.target.result;
+      document.getElementById('imgContainer').style.display = 'block';
       document.getElementById('parseBtn').disabled = false;
       setStatus('');
     };
     r.readAsDataURL(file);
+  }
+
+  function openLightbox() {
+    const lb = document.getElementById('lightbox');
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.body.style.overflow = '';
   }
 
   function setStatus(msg, type) {
@@ -713,7 +735,7 @@
 
   function resetApp() {
     imageBase64 = null; items = [];
-    document.getElementById('prevImg').classList.add('hidden');
+    document.getElementById('imgContainer').style.display = 'none';
     document.getElementById('prevImg').src = '';
     document.getElementById('parseBtn').disabled = true;
     document.getElementById('reviewStep').classList.add('hidden');
