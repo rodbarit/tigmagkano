@@ -113,9 +113,9 @@ Rules:
       createdAt,
       expiresAt,
       items: items.map(it => ({ ...it, assignments: {} })),
-      vat_adjustment: vat_adjustment || null,
-      sc_discount: sc_discount || null,
-      pwd_discount: pwd_discount || null,
+      vat_adjustment: vat_adjustment != null ? vat_adjustment : null,
+      sc_discount: sc_discount != null ? sc_discount : null,
+      pwd_discount: pwd_discount != null ? pwd_discount : null,
       names: [],
     };
 
