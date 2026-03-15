@@ -259,10 +259,15 @@
 
   // ── ORDER STEP ─────────────────────────────────────────────────────────────
   function getDiscountItems() {
-    // discount items are now stored in order.items with isDiscount flag
+    // discount items are stored in order.items with isDiscount flag
+    // return them directly so indexOf works correctly
     const fromItems = order.items.filter(it => it.isDiscount);
     if (fromItems.length > 0) return fromItems;
-    // fallback: build from order fields for older orders
+    // fallback for older orders without isDiscount flag - match by name
+    const names = ['VAT Adjustment', 'SC Discount', 'PWD Discount'];
+    const fromNames = order.items.filter(it => names.includes(it.name));
+    if (fromNames.length > 0) return fromNames;
+    // last resort: build from order fields
     const discounts = [];
     const vat = order.vat_adjustment;
     const scd = order.sc_discount;
@@ -324,9 +329,10 @@
       divider.textContent = 'Discounts';
       list.appendChild(divider);
 
-      discountItems.forEach((item, di) => {
-        const i = discountStartIdx + di;
-        if (myQtys[i] === undefined) myQtys[i] = 0;
+      discountItems.forEach((item) => {
+        const i = order.items.indexOf(item);
+        const savedQty = item.assignments?.[myName] || 0;
+        if (myQtys[i] === undefined) myQtys[i] = savedQty;
         const existing = myQtys[i];
         const div = document.createElement('div');
         div.className = 'item-row';
@@ -441,12 +447,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: myName,
-          assignments: myQtys.slice(0, order.items.length),
-          discountAssignments: {
-            vat: myQtys[order.items.length] || 0,
-            sc: myQtys[order.items.length + 1] || 0,
-            pwd: myQtys[order.items.length + 2] || 0
-          }
+          assignments: myQtys.slice(0, order.items.length)
         })
       });
       const data = await res.json();
@@ -528,7 +529,7 @@
     // subtotal row — sumproduct of qty × unit_cost
     const itemsSubtotal = foodItems.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
     const personTotals = allNames.map(n => {
-      return foodItems.reduce((s, item, i) => {
+      return foodItems.reduce((s, item) => {
         const idx = order.items.indexOf(item);
         return s + getQty(item, idx, n) * (parseFloat(item.unit_cost)||0);
       }, 0);
@@ -543,43 +544,37 @@
         ${personTotals.map(t => `<td class="r">₱${t.toFixed(2)}</td>`).join('')}
       </tr>`;
 
-    // discount rows from vat/scd/pwd fields
-    const discountDefs = [];
-    if (vat) discountDefs.push({ label: 'VAT Adjustment', value: vat, key: 'vat' });
-    if (scd) discountDefs.push({ label: 'SC Discount', value: scd, key: 'sc' });
-    if (pwd) discountDefs.push({ label: 'PWD Discount', value: pwd, key: 'pwd' });
-
-    discountDefs.forEach(d => {
-      // find matching item in order.items by name
-      const match = order.items.find(it => it.name === d.label);
-      const totalDiscAssigned = allNames.reduce((s, n) => {
-        const qty = match ? (getQty(match, order.items.indexOf(match), n) || 0) : 0;
-        return s + qty;
-      }, 0);
-      const discUnassigned = Math.round((1 - totalDiscAssigned) * 1000) / 1000;
-      const discUnassignedAmt = discUnassigned * Math.abs(d.value);
+    // discount items — treat exactly like food items
+    const discountItems2 = order.items.filter(it => it.isDiscount);
+    discountItems2.forEach((item) => {
+      const idx = order.items.indexOf(item);
+      const unitCost = parseFloat(item.unit_cost) || 0;
+      const qty = parseInt(item.qty) || 1;
+      const rowTotal = unitCost * qty;
+      const totalAssigned = allNames.reduce((s, n) => s + getQty(item, idx, n), 0);
+      const unassigned = Math.round((qty - totalAssigned) * 1000) / 1000;
+      const unassignedAmt = unassigned * Math.abs(unitCost);
       html += `<tr>
-        <td style="text-align:center;color:#1D9E75;font-size:12px">1</td>
-        <td style="color:#1D9E75;font-size:12px">${d.label}</td>
-        <td class="r" style="color:#1D9E75;font-size:12px">₱${d.value.toFixed(2)}</td>
-        <td class="r" style="color:${discUnassigned > 0 ? '#E67E22' : '#1D9E75'};font-size:12px;font-weight:${discUnassigned > 0 ? '600' : '400'}">${discUnassigned > 0 ? '₱'+discUnassignedAmt.toFixed(2) : '✓'}</td>
+        <td style="text-align:center;color:#8899b5;font-size:12px">${qty}</td>
+        <td style="font-size:12px">${item.name}</td>
+        <td class="r" style="font-size:12px">₱${rowTotal.toFixed(2)}</td>
+        <td class="r" style="color:${unassigned > 0 ? '#E67E22' : '#1D9E75'};font-size:12px;font-weight:${unassigned > 0 ? '600' : '400'}">${unassigned > 0 ? '₱'+unassignedAmt.toFixed(2) : '✓'}</td>
         ${allNames.map(n => {
-          const qty = match ? (getQty(match, order.items.indexOf(match), n) || 0) : 0;
-          const amt = qty * d.value;
-          return `<td class="r" style="color:${qty > 0 ? '#c0392b' : '#c0ccda'};font-size:12px">${qty > 0 ? '₱'+amt.toFixed(2) : '—'}</td>`;
+          const pQty = getQty(item, idx, n);
+          const amt = pQty * unitCost;
+          return `<td class="r" style="color:${pQty > 0 ? '#1a1a2e' : '#c0ccda'};font-size:12px">${pQty > 0 ? '₱'+amt.toFixed(2) : '—'}</td>`;
         }).join('')}
       </tr>`;
     });
 
-    // total to pay
-    const grandTotal = itemsSubtotal + vat + scd + pwd;
+    // total to pay — sum of food + discount items per person
+    const grandTotal = order.items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
     const personGrand = personTotals.map((t, i) => {
-      let discShare = 0;
-      discountDefs.forEach(d => {
-        const match = order.items.find(it => it.name === d.label);
-        const qty = match ? (getQty(match, order.items.indexOf(match), allNames[i]) || 0) : 0;
-        discShare += qty * d.value;
-      });
+      const discShare = discountItems2.reduce((s, item) => {
+        const idx = order.items.indexOf(item);
+        const pQty = getQty(item, idx, allNames[i]);
+        return s + pQty * (parseFloat(item.unit_cost)||0);
+      }, 0);
       return t + discShare;
     });
 
