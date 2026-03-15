@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1C4587">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="tig-magkano">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <title>tig-magkano</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -701,7 +707,6 @@
     const btn = document.getElementById('shareBtn');
     if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
     try {
-      // include discount items in order.items so assignments are tracked
       const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
       const discountItems = [];
       if (vat !== null) discountItems.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat, isDiscount: true });
@@ -753,6 +758,13 @@
     document.getElementById('scVal').value = '';
     document.getElementById('shareResult').style.display = 'none';
     document.getElementById('shareLink').value = '';
+  }
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js');
+    });
   }
 </script>
 </body>
