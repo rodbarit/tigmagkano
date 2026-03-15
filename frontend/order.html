@@ -282,18 +282,20 @@
     const discountItems = getDiscountItems();
     const discountStartIdx = allItems.length;
 
-    // Render food items
-    order.items.forEach((item, i) => {
+    // Render food items only (exclude discount items - they show in Discounts section)
+    order.items.filter(it => !it.isDiscount).forEach((item) => {
+      const i = order.items.indexOf(item);
       const existing = myName && item.assignments && item.assignments[myName] ? item.assignments[myName] : 0;
       myQtys[i] = existing;
       const div = document.createElement('div');
       div.className = 'item-row';
       div.id = `item-row-${i}`;
+      if (item.name.toLowerCase().includes('service')) { div.style.borderColor = '#85B7EB'; div.style.background = '#E6F1FB'; }
       div.innerHTML = `
         <div class="item-top">
           <div class="item-info">
             <div class="item-name">${item.name}</div>
-            <div class="item-cost">₱${parseFloat(item.unit_cost).toFixed(2)} each · ${item.qty} ordered</div>
+            <div class="item-cost" style="color:${item.name.toLowerCase().includes('service') ? '#185FA5' : 'var(--muted)'}">₱${parseFloat(item.unit_cost).toFixed(2)} each · ${item.qty} ordered</div>
           </div>
           <div class="item-qty">
             <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
