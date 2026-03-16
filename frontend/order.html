@@ -94,7 +94,8 @@
     align-items: center; justify-content: center; color: var(--blue-dark);
     transition: background 0.1s;
   }
-  .qty-btn:hover { background: #e8eef8; }
+  .qty-btn:hover:not(:disabled) { background: #e8eef8; }
+  .qty-btn:disabled { opacity: 0.25; cursor: not-allowed; }
   .qty-num { font-size: 15px; font-weight: 600; min-width: 24px; text-align: center; }
 
   .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -169,6 +170,11 @@
 
   <!-- Main content -->
   <div id="mainContent" class="hidden fade-in">
+
+    <!-- Context banner -->
+    <div style="background:#e8f4ff;border:1px solid #b8d4f0;border-radius:12px;padding:0.85rem 1.1rem;margin-bottom:1.1rem;font-size:13px;color:#1C4587;line-height:1.6">
+      📋 <strong>You've been invited to split a receipt.</strong> Enter your name below, then tap the items you ordered.
+    </div>
 
     <!-- Step 1: Enter name -->
     <div class="card" id="nameStep">
@@ -296,24 +302,31 @@
     // Render food items only (exclude discount items - they show in Discounts section)
     order.items.filter(it => !it.isDiscount).forEach((item) => {
       const i = order.items.indexOf(item);
-      const existing = myName && item.assignments && item.assignments[myName] ? item.assignments[myName] : 0;
+      const isShared = item.name.toLowerCase().includes('service');
+      const existing = isShared ? getPrefill(item) : (myName && item.assignments && item.assignments[myName] ? item.assignments[myName] : 0);
       myQtys[i] = existing;
+      const remaining = getRemaining(item);
+      const isTaken = remaining <= 0 && existing <= 0;
       const div = document.createElement('div');
       div.className = 'item-row';
       div.id = `item-row-${i}`;
       if (item.name.toLowerCase().includes('service')) { div.style.borderColor = '#85B7EB'; div.style.background = '#E6F1FB'; }
+      if (isTaken) { div.style.opacity = '0.5'; }
       div.innerHTML = `
         <div class="item-top">
           <div class="item-info">
             <div class="item-name">${item.name}</div>
             <div class="item-cost" style="color:${item.name.toLowerCase().includes('service') ? '#185FA5' : 'var(--muted)'}">₱${parseFloat(item.unit_cost).toFixed(2)} each · ${item.qty} ordered</div>
           </div>
-          <div class="item-qty">
+          ${isTaken
+            ? `<span style="font-size:11px;font-weight:700;color:#999;background:#f0f0f0;border:1px solid #ddd;border-radius:6px;padding:4px 10px;white-space:nowrap">Taken</span>`
+            : `<div class="item-qty">
             <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
-            <div class="qty-num" id="qty-${i}">${existing % 1 === 0 ? existing : existing}</div>
-            <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
+            <div class="qty-num" id="qty-${i}">${existing}</div>
+            <button class="qty-btn" onclick="changeQty(${i}, 1)" ${existing >= remaining ? 'disabled' : ''}>+</button>
           </div>
-          <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>
+          <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>`
+          }
         </div>
         <div class="split-row hidden" id="split-row-${i}">
           <span>Split</span>
@@ -337,8 +350,7 @@
 
       discountItems.forEach((item) => {
         const i = order.items.indexOf(item);
-        const savedQty = item.assignments?.[myName] || 0;
-        if (myQtys[i] === undefined) myQtys[i] = savedQty;
+        if (myQtys[i] === undefined || myQtys[i] === 0) myQtys[i] = getPrefill(item);
         const existing = myQtys[i];
         const div = document.createElement('div');
         div.className = 'item-row';
@@ -411,11 +423,32 @@
   }
 
   function changeQty(i, delta) {
-    myQtys[i] = Math.max(0, Math.round(((myQtys[i] || 0) + delta) * 1000) / 1000);
+    const remaining = getRemaining(order.items[i]);
+    myQtys[i] = Math.min(remaining, Math.max(0, Math.round(((myQtys[i] || 0) + delta) * 1000) / 1000));
     document.getElementById(`qty-${i}`).textContent = myQtys[i];
     document.getElementById(`qty-${i}`).style.color = '';
     const tag = document.getElementById(`split-tag-${i}`);
     if (tag) tag.classList.add('hidden');
+    // update + button disabled state
+    const plusBtn = document.querySelector(`#item-row-${i} .qty-btn:last-of-type`);
+    if (plusBtn) plusBtn.disabled = myQtys[i] >= remaining;
+  }
+
+  function getRemaining(item) {
+    const othersTotal = Object.entries(item.assignments || {})
+      .filter(([n]) => n !== myName)
+      .reduce((s, [, v]) => s + (parseFloat(v) || 0), 0);
+    return Math.max(0, (parseFloat(item.qty) || 1) - othersTotal);
+  }
+
+  function getPrefill(item) {
+    const saved = parseFloat(item.assignments?.[myName] || 0);
+    if (saved > 0) return saved;
+    const otherVals = Object.entries(item.assignments || {})
+      .filter(([n]) => n !== myName)
+      .map(([, v]) => parseFloat(v) || 0)
+      .filter(v => v > 0);
+    return otherVals.length ? otherVals[0] : 0;
   }
 
   // ── SUBMIT ─────────────────────────────────────────────────────────────────

@@ -204,6 +204,7 @@
   <div class="logo-box">🧾</div>
   <div>
     <h1>tig-magkano</h1>
+    <span style="font-size:12px;opacity:0.65;font-weight:400">Snap a receipt · split the bill</span>
   </div>
 </header>
 
@@ -228,6 +229,11 @@
       <img id="lightboxImg" style="max-width:92%;max-height:92%;border-radius:10px;object-fit:contain">
     </div>
     <button class="parse-btn" id="parseBtn" onclick="parseReceipt()" disabled>Parse receipt</button>
+    <div style="text-align:center;margin-top:0.65rem">
+      <button onclick="loadSample()" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:inherit">
+        No receipt? Try a sample
+      </button>
+    </div>
     <div class="status" id="status"></div>
   </div>
 
@@ -395,6 +401,7 @@
 
   async function parseReceipt() {
     if (!imageBase64) return;
+    if (imageBase64 === 'sample') { setStatus('Please upload a real receipt to parse.', 'error'); return; }
     const btn = document.getElementById('parseBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Parsing receipt...';
@@ -746,11 +753,46 @@
     });
   }
 
+  function loadSample() {
+    const sample = {
+      items: [
+        { qty: 2, name: 'Pork Xiao Long Bao (10pc)', unit_cost: 398 },
+        { qty: 1, name: 'Shrimp & Pork Xiao Long Bao (10pc)', unit_cost: 448 },
+        { qty: 2, name: 'Pan-Fried Pork Buns (6pc)', unit_cost: 328 },
+        { qty: 1, name: 'Truffle & Pork Xiao Long Bao (6pc)', unit_cost: 498 },
+        { qty: 3, name: 'Steamed Chicken Soup Dumplings (10pc)', unit_cost: 368 },
+        { qty: 1, name: 'Braised Pork Belly Buns (3pc)', unit_cost: 278 },
+        { qty: 2, name: 'Spicy Wontons with Noodles', unit_cost: 268 },
+        { qty: 1, name: 'Noodles with Scallion & Ginger Sauce', unit_cost: 228 },
+        { qty: 2, name: 'Garlic Fried Rice', unit_cost: 218 },
+        { qty: 4, name: 'Sauteed String Beans', unit_cost: 258 },
+      ],
+      service_charge: 392.40,
+      vat_adjustment: null,
+      sc_discount: null,
+      pwd_discount: null
+    };
+
+    items = sample.items;
+    document.getElementById('scVal').value = sample.service_charge != null ? sample.service_charge : '';
+    _vatVal = ''; _scdVal = ''; _pwdVal = '';
+
+    imageBase64 = 'sample';
+    document.getElementById('imgContainer').style.display = 'none';
+    document.getElementById('parseBtn').style.display = 'none';
+
+    renderAll();
+    document.getElementById('reviewStep').classList.remove('hidden');
+    setStatus(`✓ Sample loaded — ${items.length} items. Review and edit below.`, 'ok');
+  }
+
   function resetApp() {
     imageBase64 = null; items = [];
     document.getElementById('imgContainer').style.display = 'none';
     document.getElementById('prevImg').src = '';
-    document.getElementById('parseBtn').disabled = true;
+    const parseBtn = document.getElementById('parseBtn');
+    parseBtn.disabled = true;
+    parseBtn.style.display = '';
     document.getElementById('reviewStep').classList.add('hidden');
     document.getElementById('fi').value = '';
     setStatus('');
