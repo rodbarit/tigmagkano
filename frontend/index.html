@@ -191,10 +191,48 @@
   }
   .btn-share:hover { background: #f0f4fa; }
 
+  .step-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  .step-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+  .step-bar-circle {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    background: #dde5f0; color: #8899b5;
+    transition: all 0.2s;
+  }
+  .step-bar-circle.active { background: var(--blue-dark); color: #fff; }
+  .step-bar-circle.done   { background: #1D9E75; color: #fff; }
+  .step-bar-label {
+    font-size: 10px; font-weight: 600;
+    color: #8899b5; text-transform: uppercase; letter-spacing: 0.7px;
+    transition: color 0.2s; white-space: nowrap;
+  }
+  .step-bar-label.active, .step-bar-label.done { color: var(--text); }
+  .step-bar-line {
+    height: 2px; width: 52px;
+    background: #dde5f0;
+    margin-bottom: 18px;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .step-bar-line.done { background: #1D9E75; }
+
   @media (max-width: 600px) {
     .disc-grid { grid-template-columns: 1fr; }
     header h1 { font-size: 17px; }
     .actions { flex-direction: column; }
+    .step-bar-line { width: 32px; }
   }
 </style>
 </head>
@@ -209,6 +247,23 @@
 </header>
 
 <main>
+  <div class="step-bar" id="stepBar">
+    <div class="step-bar-item">
+      <div class="step-bar-circle active" id="sc1">1</div>
+      <div class="step-bar-label active" id="sl1">Upload</div>
+    </div>
+    <div class="step-bar-line" id="sline1"></div>
+    <div class="step-bar-item">
+      <div class="step-bar-circle" id="sc2">2</div>
+      <div class="step-bar-label" id="sl2">Review</div>
+    </div>
+    <div class="step-bar-line" id="sline2"></div>
+    <div class="step-bar-item">
+      <div class="step-bar-circle" id="sc3">3</div>
+      <div class="step-bar-label" id="sl3">Share</div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="step-label"><span class="step-num">1</span> Upload receipt</div>
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fi').click()">
@@ -303,47 +358,17 @@
     </div>
 
 
-    <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:0.5rem">OPTIONAL</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:8px">
-        <div style="font-size:11px;font-weight:600;color:#8899b5;text-transform:uppercase;letter-spacing:0.9px">Copy to template</div>
-        <a href="https://docs.google.com/spreadsheets/d/17NjdTholG5O66SmpdLzFgA8yQ429Z2NPKgpMlRARMrw/edit?usp=sharing"
-           target="_blank"
-           style="font-size:12px;color:#1C4587;text-decoration:none;display:inline-flex;align-items:center;gap:5px;border:1px solid #c5d3e8;border-radius:7px;padding:5px 10px;background:transparent">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 3H21V10" stroke="#1C4587" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 3L10 14" stroke="#1C4587" stroke-width="2" stroke-linecap="round"/>
-            <path d="M19 13V20C19 20.5523 18.5523 21 18 21H4C3.44772 21 3 20.5523 3 20V6C3 5.44772 3.44772 5 4 5H11" stroke="#1C4587" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          Open Google Sheets template · by Pao Santos
-        </a>
-      </div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7">
-        Alternatively, if you are more comfortable with Google Sheets, you can
-        <a href="https://docs.google.com/spreadsheets/d/17NjdTholG5O66SmpdLzFgA8yQ429Z2NPKgpMlRARMrw/edit?usp=sharing" target="_blank" style="color:#1C4587;font-weight:600">create a copy of Pao's template</a>
-        and paste this table at cell <strong>A3</strong>.
-      </p>
-      <div style="font-size:12px;color:#8899b5;margin-bottom:8px">Copy the table below and paste it directly into the template.</div>
-      <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
-        <table id="copyTable" style="border-collapse:collapse;width:100%;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif">
-          <thead>
-            <tr>
-              <th style="background:#1C4587;color:#fff;font-weight:600;padding:7px 12px;text-align:center;width:60px">Qty</th>
-              <th style="background:#1C4587;color:#fff;font-weight:600;padding:7px 12px;text-align:left">Item Name</th>
-              <th style="background:#1C4587;color:#fff;font-weight:600;padding:7px 12px;text-align:right;width:110px">Unit Cost</th>
-            </tr>
-          </thead>
-          <tbody id="copyTableBody"></tbody>
-        </table>
-      </div>
-      <button onclick="copyTable()" id="copyBtn"
-        style="margin-top:8px;font-size:12px;font-family:inherit;padding:6px 14px;border:1px solid var(--border);border-radius:7px;background:transparent;cursor:pointer;color:var(--text)">
-        Copy table
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);flex-wrap:wrap;gap:8px">
+      <button onclick="resetApp()" style="font-size:12px;font-family:inherit;padding:6px 16px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;color:var(--muted)">Start over</button>
+      <button onclick="copyTableAndOpen()" id="copyBtn"
+        style="font-size:12px;font-family:inherit;padding:6px 14px;border:1px solid #c5d3e8;border-radius:8px;background:transparent;cursor:pointer;color:#1C4587;display:inline-flex;align-items:center;gap:5px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 3H21V10" stroke="#1C4587" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 3L10 14" stroke="#1C4587" stroke-width="2" stroke-linecap="round"/>
+          <path d="M19 13V20C19 20.5523 18.5523 21 18 21H4C3.44772 21 3 20.5523 3 20V6C3 5.44772 3.44772 5 4 5H11" stroke="#1C4587" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Use Google Sheets instead
       </button>
-    </div>
-
-    <div style="text-align:center;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)">
-      <button onclick="resetApp()" style="font-size:13px;font-family:inherit;padding:8px 24px;border:1px solid var(--border);border-radius:10px;background:transparent;cursor:pointer;color:var(--muted);transition:background 0.15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">Start over</button>
     </div>
   </div>
 </main>
@@ -429,6 +454,7 @@
 
       renderAll();
       document.getElementById('reviewStep').classList.remove('hidden');
+      updateProgress(2);
       setStatus(`✓ Parsed ${items.length} item${items.length !== 1 ? 's' : ''}. Review and edit below.`, 'ok');
     } catch (err) {
       setStatus('Error: ' + err.message, 'error');
@@ -731,6 +757,7 @@
       const link = `${window.location.origin}/order.html?id=${data.orderId}`;
       document.getElementById('shareLink').value = link;
       document.getElementById('shareResult').style.display = 'block';
+      updateProgress(3);
     } catch (err) {
       setStatus('Error generating link: ' + err.message, 'error');
     } finally {
@@ -783,7 +810,45 @@
 
     renderAll();
     document.getElementById('reviewStep').classList.remove('hidden');
+    updateProgress(2);
     setStatus(`✓ Sample loaded — ${items.length} items. Review and edit below.`, 'ok');
+  }
+
+  function updateProgress(step) {
+    for (let i = 1; i <= 3; i++) {
+      const circle = document.getElementById('sc' + i);
+      const label  = document.getElementById('sl' + i);
+      circle.className = 'step-bar-circle';
+      label.className  = 'step-bar-label';
+      if (i < step)       { circle.className += ' done'; circle.textContent = '✓'; label.className += ' done'; }
+      else if (i === step) { circle.className += ' active'; circle.textContent = i; label.className += ' active'; }
+      else                 { circle.textContent = i; }
+    }
+    for (let i = 1; i <= 2; i++) {
+      document.getElementById('sline' + i).className = 'step-bar-line' + (i < step ? ' done' : '');
+    }
+  }
+
+  function copyTableAndOpen() {
+    const allRows = [...items];
+    const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
+    if (vat !== null) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat });
+    if (scd !== null) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd });
+    if (pwd !== null) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd });
+    const rows = [['Qty', 'Item Name', 'Unit Cost']];
+    allRows.forEach(it => rows.push([parseInt(it.qty)||1, it.name||'', (parseFloat(it.unit_cost)||0).toFixed(2)]));
+    const text = rows.map(r => r.join('\t')).join('\n');
+    const btn = document.getElementById('copyBtn');
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✓ Copied! Opening Sheets...';
+      btn.style.color = '#1D9E75';
+      btn.style.borderColor = '#1D9E75';
+      setTimeout(() => {
+        window.open('https://docs.google.com/spreadsheets/d/17NjdTholG5O66SmpdLzFgA8yQ429Z2NPKgpMlRARMrw/edit?usp=sharing', '_blank');
+        btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 3H21V10" stroke="#1C4587" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3L10 14" stroke="#1C4587" stroke-width="2" stroke-linecap="round"/><path d="M19 13V20C19 20.5523 18.5523 21 18 21H4C3.44772 21 3 20.5523 3 20V6C3 5.44772 3.44772 5 4 5H11" stroke="#1C4587" stroke-width="2" stroke-linecap="round"/></svg> Use Google Sheets instead`;
+        btn.style.color = '#1C4587'; btn.style.borderColor = '#c5d3e8';
+      }, 1200);
+    }).catch(() => alert('Copy failed — please try again.'));
   }
 
   function resetApp() {
@@ -800,6 +865,7 @@
     document.getElementById('scVal').value = '';
     document.getElementById('shareResult').style.display = 'none';
     document.getElementById('shareLink').value = '';
+    updateProgress(1);
   }
 </script>
 <script>
