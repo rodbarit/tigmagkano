@@ -1,6 +1,6 @@
 const https = require('https');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
 
 const client = new DynamoDBClient({ region: 'ap-southeast-1' });
 const dynamo = DynamoDBDocumentClient.from(client);
@@ -30,6 +30,23 @@ exports.handler = async (event) => {
 
   // ── PARSE RECEIPT  POST /parse ───────────────────────────────────────────
   if (method === 'POST' && path === '/parse') {
+    // Rate limit: 5 parses per IP per day
+    const ip = event.requestContext?.http?.sourceIp || 'unknown';
+    const today = new Date().toISOString().slice(0, 10);
+    const rateKey = `ratelimit#${ip}#${today}`;
+    const rateTtl = Math.floor(Date.now() / 1000) + (2 * 24 * 60 * 60);
+    const rateResult = await dynamo.send(new UpdateCommand({
+      TableName: TABLE,
+      Key: { orderId: rateKey },
+      UpdateExpression: 'ADD #cnt :one SET expiresAt = if_not_exists(expiresAt, :ttl)',
+      ExpressionAttributeNames: { '#cnt': 'count' },
+      ExpressionAttributeValues: { ':one': 1, ':ttl': rateTtl },
+      ReturnValues: 'ALL_NEW',
+    }));
+    if (rateResult.Attributes.count > 5) {
+      return resp(429, { error: 'Daily limit reached. You can parse up to 5 receipts per day.' });
+    }
+
     let body;
     try { body = JSON.parse(event.body); } catch { return resp(400, { error: 'Invalid JSON' }); }
 

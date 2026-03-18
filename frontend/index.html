@@ -336,7 +336,7 @@
       <button onclick="shareOrder()" id="shareBtn"
         style="width:100%;padding:0.75rem;font-size:14px;font-weight:600;font-family:inherit;background:#1C4587;color:#fff;border:none;border-radius:10px;cursor:pointer;transition:opacity 0.15s"
         onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
-        🔗 Generate shareable link
+        No more edits? Get link to share with friends
       </button>
     </div>
     <div id="shareResult" style="display:none;margin-bottom:1rem;padding:1rem 1.25rem;background:#e8f4ff;border-radius:12px;border:1.5px solid #1C4587">
@@ -738,7 +738,7 @@
 
   async function shareOrder() {
     const btn = document.getElementById('shareBtn');
-    if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
+    if (btn) { btn.textContent = 'Getting your link...'; btn.disabled = true; }
     try {
       const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
       const discountItems = [];
@@ -761,7 +761,7 @@
     } catch (err) {
       setStatus('Error generating link: ' + err.message, 'error');
     } finally {
-      if (btn) { btn.textContent = '🔗 Generate shareable link'; btn.disabled = false; }
+      if (btn) { btn.textContent = 'No more edits? Get link to share with friends'; btn.disabled = false; }
     }
   }
 
