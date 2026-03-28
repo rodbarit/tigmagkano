@@ -614,6 +614,7 @@
   }
 
   function getNum(id) {
+    if (id === 'scVal')  return _scVal  !== '' ? parseFloat(_scVal)  : null;
     if (id === 'vatVal') return _vatVal !== '' ? parseFloat(_vatVal) : null;
     if (id === 'scdVal') return _scdVal !== '' ? parseFloat(_scdVal) : null;
     if (id === 'pwdVal') return _pwdVal !== '' ? parseFloat(_pwdVal) : null;
