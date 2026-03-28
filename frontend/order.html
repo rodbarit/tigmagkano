@@ -574,6 +574,10 @@
       }, 0);
     });
 
+    const sc = parseFloat(order.service_charge) || 0;
+    const totalFood = personTotals.reduce((s, t) => s + t, 0);
+    const personSC = personTotals.map(t => (sc > 0 && totalFood > 0) ? (t / totalFood) * sc : 0);
+
     html += `</tbody><tfoot>
       <tr class="total-row" style="border-top:1px solid var(--border)">
         <td></td>
@@ -582,6 +586,16 @@
         <td></td>
         ${personTotals.map(t => `<td class="r">₱${t.toFixed(2)}</td>`).join('')}
       </tr>`;
+
+    if (sc > 0) {
+      html += `<tr>
+        <td></td>
+        <td style="font-size:12px;color:#185FA5">Service Charge</td>
+        <td class="r" style="font-size:12px">₱${sc.toFixed(2)}</td>
+        <td class="r" style="font-size:12px;color:#1D9E75">auto</td>
+        ${personSC.map(s => `<td class="r" style="font-size:12px;color:#185FA5">₱${s.toFixed(2)}</td>`).join('')}
+      </tr>`;
+    }
 
     // discount items — treat exactly like food items
     const discountItems2 = order.items.filter(it => it.isDiscount);
@@ -606,15 +620,15 @@
       </tr>`;
     });
 
-    // total to pay — sum of food + discount items per person
-    const grandTotal = order.items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
+    // total to pay — sum of food + service charge + discount items per person
+    const grandTotal = order.items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0) + sc;
     const personGrand = personTotals.map((t, i) => {
       const discShare = discountItems2.reduce((s, item) => {
         const idx = order.items.indexOf(item);
         const pQty = getQty(item, idx, allNames[i]);
         return s + pQty * (parseFloat(item.unit_cost)||0);
       }, 0);
-      return t + discShare;
+      return t + personSC[i] + discShare;
     });
 
     html += `<tr class="total-row">

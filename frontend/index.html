@@ -750,7 +750,7 @@
       const res = await fetch(ORDERS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: allItems, vat_adjustment: vat, sc_discount: scd, pwd_discount: pwd })
+        body: JSON.stringify({ items: allItems, vat_adjustment: vat, sc_discount: scd, pwd_discount: pwd, service_charge: getNum('scVal') })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
