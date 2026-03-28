@@ -380,7 +380,7 @@
   // ────────────────────────────────────────────────────────────────────────────
 
   let imageBase64 = null, imageMime = 'image/jpeg', items = [];
-  let _vatVal = '', _scdVal = '', _pwdVal = '';
+  let _vatVal = '', _scdVal = '', _pwdVal = '', _scVal = '';
 
   const uz = document.getElementById('uploadZone');
   uz.addEventListener('dragover',  e => { e.preventDefault(); uz.classList.add('drag'); });
@@ -447,7 +447,7 @@
       items = parsed.items || [];
       if (!items.length) throw new Error('No items found on receipt.');
 
-      document.getElementById('scVal').value   = parsed.service_charge  != null ? parsed.service_charge  : '';
+      _scVal  = parsed.service_charge  != null ? String(parsed.service_charge)  : '';
       _vatVal = parsed.vat_adjustment != null ? String(parsed.vat_adjustment) : '';
       _scdVal = parsed.sc_discount    != null ? String(parsed.sc_discount)    : '';
       _pwdVal = parsed.pwd_discount   != null ? String(parsed.pwd_discount)   : '';
@@ -544,23 +544,34 @@
 
   function renderFoot() {
     // preserve current values before re-render
+    const scEl  = document.getElementById('scRendered');
     const vatEl = document.getElementById('vatVal');
     const scdEl = document.getElementById('scdVal');
     const pwdEl = document.getElementById('pwdVal');
+    if (scEl  && scEl.value  !== '') _scVal  = scEl.value;
     if (vatEl && vatEl.value !== '') _vatVal = vatEl.value;
     if (scdEl && scdEl.value !== '') _scdVal = scdEl.value;
     if (pwdEl && pwdEl.value !== '') _pwdVal = pwdEl.value;
 
     const sub  = items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
+    const sc   = _scVal  !== '' ? parseFloat(_scVal)  : null;
     const vat  = _vatVal !== '' ? parseFloat(_vatVal) : null;
     const scd  = _scdVal !== '' ? parseFloat(_scdVal) : null;
     const pwd  = _pwdVal !== '' ? parseFloat(_pwdVal) : null;
-    const grand = sub + (vat||0) + (scd||0) + (pwd||0);
+    const grand = sub + (sc||0) + (vat||0) + (scd||0) + (pwd||0);
 
     document.getElementById('sheetFoot').innerHTML = `
       <tr>
         <td class="bg-subtotal" colspan="2" style="text-align:center">SUBTOTAL</td>
         <td class="bg-subtotal" style="text-align:right">${sub.toFixed(2)}</td>
+        <td class="bg-white"></td>
+      </tr>
+      <tr>
+        <td class="bg-white"></td>
+        <td class="bg-white">Service Charge</td>
+        <td class="bg-white" style="text-align:right">
+          <input class="ci r" type="number" step="0.01" id="scRendered" value="${sc !== null ? sc.toFixed(2) : ''}" placeholder="—" onchange="renderFoot()" style="font-size:12px;width:80px">
+        </td>
         <td class="bg-white"></td>
       </tr>
       <tr>
@@ -750,7 +761,7 @@
       const res = await fetch(ORDERS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: allItems, vat_adjustment: vat, sc_discount: scd, pwd_discount: pwd, service_charge: getNum('scVal') })
+        body: JSON.stringify({ items: allItems, vat_adjustment: vat, sc_discount: scd, pwd_discount: pwd, service_charge: _scVal !== '' ? parseFloat(_scVal) : null })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -801,7 +812,7 @@
     };
 
     items = sample.items;
-    document.getElementById('scVal').value = sample.service_charge != null ? sample.service_charge : '';
+    _scVal = sample.service_charge != null ? String(sample.service_charge) : '';
     _vatVal = ''; _scdVal = ''; _pwdVal = '';
 
     imageBase64 = 'sample';
@@ -861,8 +872,7 @@
     document.getElementById('reviewStep').classList.add('hidden');
     document.getElementById('fi').value = '';
     setStatus('');
-    _vatVal = ''; _scdVal = ''; _pwdVal = '';
-    document.getElementById('scVal').value = '';
+    _scVal = ''; _vatVal = ''; _scdVal = ''; _pwdVal = '';
     document.getElementById('shareResult').style.display = 'none';
     document.getElementById('shareLink').value = '';
     updateProgress(1);
