@@ -94,7 +94,7 @@ Rules:
     let body;
     try { body = JSON.parse(event.body); } catch { return resp(400, { error: 'Invalid JSON' }); }
 
-    const { items, vat_adjustment, sc_discount } = body;
+    const { items, vat_adjustment, sc_discount, pwd_discount, service_charge } = body;
     if (!items || !items.length) return resp(400, { error: 'Missing items' });
 
     const orderId = generateId();
@@ -107,6 +107,8 @@ Rules:
       items: items.map(it => ({ ...it, assignments: {} })),
       vat_adjustment: vat_adjustment || null,
       sc_discount: sc_discount || null,
+      pwd_discount: pwd_discount || null,
+      service_charge: service_charge || null,
       names: [],
     };
 
