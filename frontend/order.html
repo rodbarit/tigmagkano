@@ -303,7 +303,7 @@
     order.items.filter(it => !it.isDiscount).forEach((item) => {
       const i = order.items.indexOf(item);
       const isShared = item.name.toLowerCase().includes('service');
-      const existing = isShared ? getPrefill(item) : (myName && item.assignments && item.assignments[myName] ? item.assignments[myName] : 0);
+      const existing = isShared ? (parseFloat(item.assignments?.[myName]) || 0) : (myName && item.assignments && item.assignments[myName] ? item.assignments[myName] : 0);
       myQtys[i] = existing;
       const remaining = getRemaining(item);
       const isTaken = remaining <= 0 && existing <= 0;
