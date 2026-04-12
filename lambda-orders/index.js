@@ -31,17 +31,18 @@ exports.handler = async (event) => {
     let body;
     try { body = JSON.parse(event.body); } catch { return resp(400, { error: 'Invalid JSON' }); }
 
-    const { image, mediaType } = body;
+    const { image, mediaType, hint } = body;
     if (!image || !mediaType) return resp(400, { error: 'Missing image or mediaType' });
 
-    const prompt = `Parse this food receipt and return ONLY a raw JSON object, no markdown, no backticks.
+    let prompt = `Parse this food receipt and return ONLY a raw JSON object, no markdown, no backticks.
 
 Format:
 {
   "items": [{"qty": number, "name": "string", "unit_cost": number}, ...],
   "service_charge": number or null,
   "vat_adjustment": number or null,
-  "sc_discount": number or null
+  "sc_discount": number or null,
+  "total_due": number or null
 }
 
 Rules:
@@ -49,7 +50,10 @@ Rules:
 - "service_charge": the service charge amount as a positive number, or null if not found
 - "vat_adjustment": the VAT adjustment as a negative number (e.g. -84.64), or null if not found
 - "sc_discount": the senior citizen / SC discount as a negative number (e.g. -141.07), or null if not found
+- "total_due": the final total amount due / grand total on the receipt, or null if not found
 - Do NOT include subtotals or grand totals in items`;
+
+    if (hint) prompt += `\n\nIMPORTANT: ${hint}`;
 
     const requestBody = JSON.stringify({
       model: 'claude-sonnet-4-20250514',

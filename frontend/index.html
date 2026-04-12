@@ -442,7 +442,7 @@
         const err = await res.json().catch(() => ({ error: 'Unknown error' }));
         throw new Error(err.error || `HTTP ${res.status}`);
       }
-      const parsed = await res.json();
+      let parsed = await res.json();
 
       items = parsed.items || [];
       if (!items.length) throw new Error('No items found on receipt.');
@@ -452,10 +452,60 @@
       _scdVal = parsed.sc_discount    != null ? String(parsed.sc_discount)    : '';
       _pwdVal = parsed.pwd_discount   != null ? String(parsed.pwd_discount)   : '';
 
+      // Validate total: compare computed grand total with receipt's total_due
+      const receiptTotal = parsed.total_due;
+      if (receiptTotal != null) {
+        const sub = items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
+        const vat = parsed.vat_adjustment || 0;
+        const scd = parsed.sc_discount || 0;
+        const pwd = parsed.pwd_discount || 0;
+        const computed = sub + vat + scd + pwd;
+        const diff = Math.abs(computed - receiptTotal);
+        if (diff > 1) {
+          setStatus(`Total mismatch (computed ₱${computed.toFixed(2)} vs receipt ₱${receiptTotal.toFixed(2)}). Re-parsing...`);
+          btn.innerHTML = '<span class="spinner"></span>Re-checking...';
+          const res2 = await fetch(PROXY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: imageBase64, mediaType: imageMime,
+              hint: `The receipt total due is ₱${receiptTotal.toFixed(2)} but the items + discounts sum to ₱${computed.toFixed(2)} (difference: ₱${diff.toFixed(2)}). Please re-parse carefully. Check for missed items, wrong quantities, or incorrect unit prices. Make sure unit_cost is per single unit, not total for the line.` })
+          });
+          if (res2.ok) {
+            const parsed2 = await res2.json();
+            if (parsed2.items && parsed2.items.length) {
+              const sub2 = parsed2.items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
+              const computed2 = sub2 + (parsed2.vat_adjustment||0) + (parsed2.sc_discount||0) + (parsed2.pwd_discount||0);
+              const diff2 = Math.abs(computed2 - receiptTotal);
+              if (diff2 < diff) {
+                parsed = parsed2;
+                items = parsed2.items;
+                document.getElementById('scVal').value = parsed2.service_charge != null ? parsed2.service_charge : '';
+                _vatVal = parsed2.vat_adjustment != null ? String(parsed2.vat_adjustment) : '';
+                _scdVal = parsed2.sc_discount != null ? String(parsed2.sc_discount) : '';
+                _pwdVal = parsed2.pwd_discount != null ? String(parsed2.pwd_discount) : '';
+              }
+            }
+          }
+        }
+      }
+
       renderAll();
       document.getElementById('reviewStep').classList.remove('hidden');
       updateProgress(2);
-      setStatus(`✓ Parsed ${items.length} item${items.length !== 1 ? 's' : ''}. Review and edit below.`, 'ok');
+
+      // Show validation result
+      if (receiptTotal != null) {
+        const sub = items.reduce((s, it) => s + (parseFloat(it.unit_cost)||0) * (parseInt(it.qty)||1), 0);
+        const computed = sub + (parsed.vat_adjustment||0) + (parsed.sc_discount||0) + (parsed.pwd_discount||0);
+        const diff = Math.abs(computed - receiptTotal);
+        if (diff > 1) {
+          setStatus(`⚠ Parsed ${items.length} items but total is off by ₱${diff.toFixed(2)} (receipt: ₱${receiptTotal.toFixed(2)}). Please review.`, 'error');
+        } else {
+          setStatus(`✓ Parsed ${items.length} item${items.length !== 1 ? 's' : ''}. Total matches receipt (₱${receiptTotal.toFixed(2)}).`, 'ok');
+        }
+      } else {
+        setStatus(`✓ Parsed ${items.length} item${items.length !== 1 ? 's' : ''}. Review and edit below.`, 'ok');
+      }
     } catch (err) {
       setStatus('Error: ' + err.message, 'error');
     } finally {
