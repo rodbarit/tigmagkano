@@ -190,6 +190,9 @@
       <div class="step-label">Order summary</div>
       <div id="summaryContent"></div>
 
+      <button onclick="shareLink()" style="width:100%;padding:0.8rem;font-size:15px;font-weight:600;font-family:inherit;background:#1D9E75;color:#fff;border:none;border-radius:10px;cursor:pointer;margin-top:1rem;transition:opacity 0.15s" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">Share this link with friends</button>
+      <div id="shareStatus" class="status" style="margin-top:0.5rem"></div>
+
     </div>
 
   </div>
@@ -667,6 +670,23 @@
   }
 
   // ── DOWNLOAD XLSX ──────────────────────────────────────────────────────────
+  async function shareLink() {
+    const url = window.location.href;
+    const st = document.getElementById('shareStatus');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'tig-magkano — Split the bill', url });
+      } catch (e) {
+        if (e.name !== 'AbortError') { st.className = 'status error'; st.textContent = 'Share failed'; }
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      st.className = 'status ok';
+      st.textContent = '✓ Link copied!';
+      setTimeout(() => { st.textContent = ''; }, 2000);
+    }
+  }
+
   function downloadXlsx() {
     const wb = XLSX.utils.book_new();
     const ws = {};
