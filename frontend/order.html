@@ -318,18 +318,22 @@
             <div class="item-name">${item.name}</div>
             <div class="item-cost" style="color:${item.name.toLowerCase().includes('service') ? '#185FA5' : 'var(--muted)'}">₱${parseFloat(item.unit_cost).toFixed(2)} each · ${item.qty} ordered</div>
           </div>
-          ${isTaken
+          ${isShared
+            ? `<div style="text-align:right">
+              <div class="qty-num" id="qty-${i}" style="color:#1D9E75;font-size:14px">${existing}</div>
+              <span class="split-tag" id="split-tag-${i}" style="color:#185FA5;border-color:#85B7EB;background:#E6F1FB">${existing > 0 ? (existing * 100).toFixed(1) + '% pro-rated' : 'Auto pro-rated'}</span>
+            </div>`
+            : isTaken
             ? `<span style="font-size:11px;font-weight:700;color:#999;background:#f0f0f0;border:1px solid #ddd;border-radius:6px;padding:4px 10px;white-space:nowrap">Taken</span>`
             : `<div class="item-qty">
             <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
             <div class="qty-num" id="qty-${i}">${existing}</div>
             <button class="qty-btn" onclick="changeQty(${i}, 1)" ${existing >= remaining ? 'disabled' : ''}>+</button>
           </div>
-          <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>
-          ${isShared ? `<button class="split-btn" onclick="splitByOrder(${i})" style="color:#1D9E75;border-color:#b8e0d0;background:#f0f7f4">Pro-rate</button>` : ''}`
+          <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>`
           }
         </div>
-        <div class="split-row hidden" id="split-row-${i}">
+        ${isShared ? '' : `<div class="split-row hidden" id="split-row-${i}">
           <span>Split</span>
           <input type="number" id="split-orders-${i}" min="1" max="${item.qty}" value="1" style="width:44px;font-size:13px;font-weight:600;padding:4px 6px;border:1px solid #dde5f0;border-radius:6px;text-align:center;color:#1a1a2e">
           <span>order(s) between</span>
@@ -337,7 +341,7 @@
           <span>people</span>
           <button class="apply-btn" onclick="applySplit(${i})">Apply</button>
           <span class="split-tag hidden" id="split-tag-${i}"></span>
-        </div>
+        </div>`}
       `;
       list.appendChild(div);
     });
@@ -503,10 +507,9 @@
     }
     const tag = document.getElementById(`split-tag-${scIdx}`);
     if (tag && val > 0) {
-      tag.textContent = `${(proportion * 100).toFixed(1)}% of orders`;
-      tag.classList.remove('hidden');
+      tag.textContent = `${(proportion * 100).toFixed(1)}% pro-rated`;
     } else if (tag) {
-      tag.classList.add('hidden');
+      tag.textContent = 'Auto pro-rated';
     }
   }
 
