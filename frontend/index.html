@@ -477,9 +477,9 @@
     tbody.innerHTML = '';
     const allRows = [...items];
     const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
-    if (vat !== null) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat, isDiscount: true });
-    if (scd !== null) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd, isDiscount: true });
-    if (pwd !== null) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd, isDiscount: true });
+    if (vat) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat, isDiscount: true });
+    if (scd) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd, isDiscount: true });
+    if (pwd) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd, isDiscount: true });
 
     allRows.forEach((it, i) => {
       const tr = document.createElement('tr');
@@ -497,9 +497,9 @@
   function copyTable() {
     const allRows = [...items];
     const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
-    if (vat !== null) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat });
-    if (scd !== null) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd });
-    if (pwd !== null) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd });
+    if (vat) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat });
+    if (scd) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd });
+    if (pwd) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd });
     const rows = [['Qty', 'Item Name', 'Unit Cost']];
     allRows.forEach(it => rows.push([parseInt(it.qty)||1, it.name||'', (parseFloat(it.unit_cost)||0).toFixed(2)]));
     const text = rows.map(r => r.join('\t')).join('\n');
@@ -742,9 +742,9 @@
     try {
       const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
       const discountItems = [];
-      if (vat !== null) discountItems.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat, isDiscount: true });
-      if (scd !== null) discountItems.push({ qty: 1, name: 'SC Discount', unit_cost: scd, isDiscount: true });
-      if (pwd !== null) discountItems.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd, isDiscount: true });
+      if (vat) discountItems.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat, isDiscount: true });
+      if (scd) discountItems.push({ qty: 1, name: 'SC Discount', unit_cost: scd, isDiscount: true });
+      if (pwd) discountItems.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd, isDiscount: true });
       const allItems = [...items, ...discountItems];
 
       const res = await fetch(ORDERS_URL, {
@@ -832,9 +832,9 @@
   function copyTableAndOpen() {
     const allRows = [...items];
     const vat = getNum('vatVal'), scd = getNum('scdVal'), pwd = getNum('pwdVal');
-    if (vat !== null) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat });
-    if (scd !== null) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd });
-    if (pwd !== null) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd });
+    if (vat) allRows.push({ qty: 1, name: 'VAT Adjustment', unit_cost: vat });
+    if (scd) allRows.push({ qty: 1, name: 'SC Discount', unit_cost: scd });
+    if (pwd) allRows.push({ qty: 1, name: 'PWD Discount', unit_cost: pwd });
     const rows = [['Qty', 'Item Name', 'Unit Cost']];
     allRows.forEach(it => rows.push([parseInt(it.qty)||1, it.name||'', (parseFloat(it.unit_cost)||0).toFixed(2)]));
     const text = rows.map(r => r.join('\t')).join('\n');
