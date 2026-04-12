@@ -517,6 +517,21 @@
     const btn = document.getElementById('submitBtn');
     const st = document.getElementById('submitStatus');
 
+    // Auto-compute service charge proportionally if user hasn't set it
+    const scIdx = order.items.findIndex(it => !it.isDiscount && it.name.toLowerCase().includes('service'));
+    if (scIdx !== -1 && (myQtys[scIdx] || 0) === 0) {
+      const foodItems = order.items.filter(it => !it.isDiscount && !it.name.toLowerCase().includes('service'));
+      const receiptFoodTotal = foodItems.reduce((s, it) => s + (parseFloat(it.unit_cost) || 0) * (parseInt(it.qty) || 1), 0);
+      const myFoodTotal = foodItems.reduce((s, it) => {
+        const idx = order.items.indexOf(it);
+        return s + (myQtys[idx] || 0) * (parseFloat(it.unit_cost) || 0);
+      }, 0);
+      if (receiptFoodTotal > 0 && myFoodTotal > 0) {
+        const proportion = myFoodTotal / receiptFoodTotal;
+        myQtys[scIdx] = Math.round(proportion * 1000) / 1000;
+      }
+    }
+
     // Validate: total assigned per item can't exceed item qty
     for (let i = 0; i < order.items.length; i++) {
       const item = order.items[i];
