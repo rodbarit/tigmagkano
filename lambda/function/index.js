@@ -50,10 +50,10 @@ exports.handler = async (event) => {
     let body;
     try { body = JSON.parse(event.body); } catch { return resp(400, { error: 'Invalid JSON' }); }
 
-    const { image, mediaType } = body;
+    const { image, mediaType, hint } = body;
     if (!image || !mediaType) return resp(400, { error: 'Missing image or mediaType' });
 
-    const prompt = `Parse this food receipt and return ONLY a raw JSON object, no markdown, no backticks.
+    let prompt = `Parse this food receipt and return ONLY a raw JSON object, no markdown, no backticks.
 
 Format:
 {
@@ -61,7 +61,8 @@ Format:
   "service_charge": number or null,
   "vat_adjustment": number or null,
   "sc_discount": number or null,
-  "pwd_discount": number or null
+  "pwd_discount": number or null,
+  "total_due": number or null
 }
 
 Rules:
@@ -70,8 +71,11 @@ Rules:
 - "vat_adjustment": look carefully for VAT, Value Added Tax, or any tax adjustment — return as a negative number (e.g. -84.64), or null ONLY if absolutely not on the receipt
 - "sc_discount": look carefully for SC, Senior Citizen discount — return as a negative number (e.g. -141.07), or null ONLY if absolutely not on the receipt
 - "pwd_discount": look carefully for PWD, Persons with Disability discount — return as a negative number, or null ONLY if absolutely not on the receipt
+- "total_due": the final total amount due / grand total on the receipt, or null if not found
 - These discounts are often small amounts near the bottom of the receipt — scan carefully before returning null
 - Do NOT include subtotals or grand totals in items`;
+
+    if (hint) prompt += `\n\nIMPORTANT: ${hint}`;
 
     const requestBody = JSON.stringify({
       model: 'claude-sonnet-4-20250514',
