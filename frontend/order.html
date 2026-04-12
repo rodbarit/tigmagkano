@@ -326,7 +326,7 @@
             <button class="qty-btn" onclick="changeQty(${i}, 1)" ${existing >= remaining ? 'disabled' : ''}>+</button>
           </div>
           <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>
-          ${isShared ? `<button class="split-btn" onclick="splitByOrder(${i})" style="color:#1D9E75;border-color:#b8e0d0;background:#f0f7f4">By order</button>` : ''}`
+          ${isShared ? `<button class="split-btn" onclick="splitByOrder(${i})" style="color:#1D9E75;border-color:#b8e0d0;background:#f0f7f4">Pro-rate</button>` : ''}`
           }
         </div>
         <div class="split-row hidden" id="split-row-${i}">
