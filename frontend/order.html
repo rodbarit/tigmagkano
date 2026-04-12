@@ -751,17 +751,14 @@
   async function shareLink() {
     const url = window.location.href;
     const st = document.getElementById('shareStatus');
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'tig-magkano — Split the bill', url });
-      } catch (e) {
-        if (e.name !== 'AbortError') { st.className = 'status error'; st.textContent = 'Share failed'; }
-      }
-    } else {
+    try {
       await navigator.clipboard.writeText(url);
       st.className = 'status ok';
       st.textContent = '✓ Link copied!';
       setTimeout(() => { st.textContent = ''; }, 2000);
+    } catch (e) {
+      st.className = 'status error';
+      st.textContent = 'Could not copy link';
     }
   }
 
