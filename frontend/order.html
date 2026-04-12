@@ -182,7 +182,10 @@
     <div class="card hidden" id="orderStep">
       <div class="step-label"><span class="step-num">2</span> What did you order? <span id="orderingAs" style="font-size:12px;color:#1C4587;font-weight:600;margin-left:4px"></span></div>
       <div class="items-list" id="itemsList"></div>
-      <div class="status" id="submitStatus" style="margin-top:0.75rem"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.75rem">
+        <div class="status" id="submitStatus" style="margin:0;flex:1"></div>
+        <button onclick="clearMyOrder()" style="font-size:12px;color:#c0392b;background:none;border:none;cursor:pointer;font-family:inherit;font-weight:500;padding:8px 12px;min-height:44px;white-space:nowrap">Clear all</button>
+      </div>
     </div>
 
     <!-- Step 3: Summary -->
@@ -206,6 +209,9 @@
   let myName = null;
   let myQtys = [];
   let saveTimer = null;
+  let pollTimer = null;
+  let isSaving = false;
+  let isDirty = false;
 
   // ── INIT ───────────────────────────────────────────────────────────────────
   window.onload = async () => {
@@ -241,12 +247,30 @@
     if (!name) { input.focus(); return; }
     myName = name;
     document.getElementById('orderingAs').textContent = `— ordering as ${myName}`;
-    document.getElementById('nameStep').style.opacity = '0.6';
-    document.getElementById('nameStep').style.pointerEvents = 'none';
+
+    // Show confirmed state with Change link
+    const nameStep = document.getElementById('nameStep');
+    const nameRow = nameStep.querySelector('.name-row');
+    nameRow.innerHTML = `
+      <span class="participant-badge me" style="font-size:14px;padding:8px 16px">${myName}</span>
+      <button onclick="editName()" style="font-size:13px;color:var(--blue-dark);background:none;border:none;cursor:pointer;font-weight:600;font-family:inherit;padding:8px 12px;min-height:44px">Change</button>
+    `;
+
     document.getElementById('orderStep').classList.remove('hidden');
     renderItems();
     renderSummary();
     document.getElementById('summaryStep').classList.remove('hidden');
+    startPolling();
+  }
+
+  function editName() {
+    const nameStep = document.getElementById('nameStep');
+    const nameRow = nameStep.querySelector('.name-row');
+    nameRow.innerHTML = `
+      <input type="text" id="nameInput" placeholder="Enter your name" value="${myName}" onkeydown="if(event.key==='Enter')setName()">
+      <button onclick="setName()">Update</button>
+    `;
+    document.getElementById('nameInput').focus();
   }
 
   function renderParticipants() {
@@ -298,8 +322,9 @@
     order.items.filter(it => !it.isDiscount).forEach((item) => {
       const i = order.items.indexOf(item);
       const isShared = item.name.toLowerCase().includes('service');
-      const existing = isShared ? (parseFloat(item.assignments?.[myName]) || 0) : (myName && item.assignments && item.assignments[myName] ? item.assignments[myName] : 0);
-      myQtys[i] = existing;
+      const serverVal = isShared ? (parseFloat(item.assignments?.[myName]) || 0) : (myName && item.assignments && item.assignments[myName] ? item.assignments[myName] : 0);
+      if (!isDirty) myQtys[i] = serverVal;
+      const existing = myQtys[i] || 0;
       const remaining = getRemaining(item);
       const isTaken = remaining <= 0 && existing <= 0;
       const div = document.createElement('div');
@@ -319,7 +344,10 @@
               <span class="split-tag" id="split-tag-${i}" style="color:#185FA5;border-color:#85B7EB;background:#E6F1FB">${existing > 0 ? (existing * 100).toFixed(1) + '% pro-rated' : 'Auto pro-rated'}</span>
             </div>`
             : isTaken
-            ? `<span style="font-size:11px;font-weight:700;color:#999;background:#f0f0f0;border:1px solid #ddd;border-radius:6px;padding:4px 10px;white-space:nowrap">Taken</span>`
+            ? `<div style="text-align:right;max-width:140px">
+              <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.5px">Taken by</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">${Object.entries(item.assignments || {}).filter(([,v]) => (parseFloat(v)||0) > 0).map(([n,v]) => { const q = parseFloat(v); return q === 1 ? n : n + ' (' + q + ')'; }).join(', ')}</div>
+            </div>`
             : `<div class="item-qty">
             <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
             <div class="qty-num" id="qty-${i}">${existing}</div>
@@ -350,8 +378,8 @@
 
       discountItems.forEach((item) => {
         const i = order.items.indexOf(item);
-        if (myQtys[i] === undefined || myQtys[i] === 0) myQtys[i] = getPrefill(item);
-        const existing = myQtys[i];
+        if (!isDirty && (myQtys[i] === undefined || myQtys[i] === 0)) myQtys[i] = getPrefill(item);
+        const existing = myQtys[i] || 0;
         const div = document.createElement('div');
         div.className = 'item-row';
         div.id = 'item-row-' + i;
@@ -476,18 +504,24 @@
   }
 
   function getPrefill(item) {
-    const saved = parseFloat(item.assignments?.[myName] || 0);
-    if (saved > 0) return saved;
-    const otherVals = Object.entries(item.assignments || {})
-      .filter(([n]) => n !== myName)
-      .map(([, v]) => parseFloat(v) || 0)
-      .filter(v => v > 0);
-    return otherVals.length ? otherVals[0] : 0;
+    return parseFloat(item.assignments?.[myName] || 0);
+  }
+
+  // ── CLEAR ORDER ──────────────────────────────────────────────────────────
+  function clearMyOrder() {
+    if (!confirm('Clear all your selections?')) return;
+    myQtys = order.items.map(() => 0);
+    isDirty = true;
+    renderItems();
+    updateServiceChargeLive();
+    renderSummary();
+    scheduleAutoSave();
   }
 
   // ── AUTO-SAVE ────────────────────────────────────────────────────────────
   function scheduleAutoSave() {
     if (!myName) return;
+    isDirty = true;
     clearTimeout(saveTimer);
     const st = document.getElementById('submitStatus');
     st.className = 'status';
@@ -497,6 +531,7 @@
 
   async function autoSave() {
     const st = document.getElementById('submitStatus');
+    isSaving = true;
     try {
       const res = await fetch(`${ORDERS_URL}/${orderId}`, {
         method: 'PUT',
@@ -509,14 +544,57 @@
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       order = data;
+      isDirty = false;
       st.className = 'status ok';
       st.textContent = '✓ Saved';
       renderParticipants();
     } catch (err) {
       st.className = 'status error';
       st.textContent = 'Error saving: ' + err.message;
+    } finally {
+      isSaving = false;
     }
   }
+
+  // ── AUTO-REFRESH ────────────────────────────────────────────────────────
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(refreshOrder, 12000);
+  }
+
+  async function refreshOrder() {
+    if (isSaving) return;
+    try {
+      const res = await fetch(`${ORDERS_URL}/${orderId}`);
+      if (!res.ok) return;
+      const freshOrder = await res.json();
+      // preserve myQtys if user has unsaved edits
+      const savedMyQtys = [...myQtys];
+      order = freshOrder;
+      if (isDirty) {
+        myQtys = savedMyQtys;
+      }
+      renderParticipants();
+      renderItems();
+      renderSummary();
+      // restore myQtys after renderItems (which overwrites them from server)
+      if (isDirty) {
+        myQtys = savedMyQtys;
+      }
+    } catch (e) {
+      // silent fail on polling
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    } else if (myName) {
+      startPolling();
+      refreshOrder();
+    }
+  });
 
   // ── SUMMARY ────────────────────────────────────────────────────────────────
   function getQty(item, i, n) {
