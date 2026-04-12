@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1C4587">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,7 +27,7 @@
     --muted:     #5a6a80;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
   header {
     background: var(--blue-dark); color: #fff;
@@ -62,7 +62,7 @@
 
   .name-row { display: flex; gap: 10px; flex-wrap: wrap; }
   .name-row input {
-    flex: 1; font-size: 14px; font-family: inherit;
+    flex: 1; font-size: 16px; font-family: inherit;
     padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px;
     background: #fff; color: var(--text); transition: border-color 0.15s;
   }
