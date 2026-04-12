@@ -483,6 +483,33 @@
     renderSummary();
   }
 
+  function updateServiceChargeLive() {
+    const scIdx = order.items.findIndex(it => !it.isDiscount && it.name.toLowerCase().includes('service'));
+    if (scIdx === -1) return;
+    const foodItems = order.items.filter(it => !it.isDiscount && !it.name.toLowerCase().includes('service'));
+    const receiptFoodTotal = foodItems.reduce((s, it) => s + (parseFloat(it.unit_cost) || 0) * (parseInt(it.qty) || 1), 0);
+    const myFoodTotal = foodItems.reduce((s, it) => {
+      const idx = order.items.indexOf(it);
+      return s + (myQtys[idx] || 0) * (parseFloat(it.unit_cost) || 0);
+    }, 0);
+    if (receiptFoodTotal <= 0) return;
+    const proportion = myFoodTotal > 0 ? myFoodTotal / receiptFoodTotal : 0;
+    const val = Math.round(proportion * 1000) / 1000;
+    myQtys[scIdx] = val;
+    const qtyEl = document.getElementById(`qty-${scIdx}`);
+    if (qtyEl) {
+      qtyEl.textContent = val;
+      qtyEl.style.color = val > 0 ? '#1D9E75' : '';
+    }
+    const tag = document.getElementById(`split-tag-${scIdx}`);
+    if (tag && val > 0) {
+      tag.textContent = `${(proportion * 100).toFixed(1)}% of orders`;
+      tag.classList.remove('hidden');
+    } else if (tag) {
+      tag.classList.add('hidden');
+    }
+  }
+
   function changeQty(i, delta) {
     const remaining = getRemaining(order.items[i]);
     myQtys[i] = Math.min(remaining, Math.max(0, Math.round(((myQtys[i] || 0) + delta) * 1000) / 1000));
@@ -493,6 +520,11 @@
     // update + button disabled state
     const plusBtn = document.querySelector(`#item-row-${i} .qty-btn:last-of-type`);
     if (plusBtn) plusBtn.disabled = myQtys[i] >= remaining;
+    // recalculate service charge if this is a food item
+    const item = order.items[i];
+    if (!item.isDiscount && !item.name.toLowerCase().includes('service')) {
+      updateServiceChargeLive();
+    }
   }
 
   function getRemaining(item) {
