@@ -105,14 +105,6 @@
   .summary-table .r { text-align: right; }
   .summary-table .total-row td { font-weight: 600; padding-top: 12px; }
 
-  .submit-btn {
-    width: 100%; padding: 0.8rem; font-size: 15px; font-weight: 600; font-family: inherit;
-    background: #1D9E75; color: #fff; border: none; border-radius: 10px;
-    cursor: pointer; transition: opacity 0.15s, transform 0.1s; margin-top: 1rem;
-  }
-  .submit-btn:hover { opacity: 0.88; transform: translateY(-1px); }
-  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
   .summary-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .dl-btn {
     width: 100%; padding: 0.8rem; font-size: 15px; font-weight: 600; font-family: inherit;
@@ -190,8 +182,7 @@
     <div class="card hidden" id="orderStep">
       <div class="step-label"><span class="step-num">2</span> What did you order? <span id="orderingAs" style="font-size:12px;color:#1C4587;font-weight:600;margin-left:4px"></span></div>
       <div class="items-list" id="itemsList"></div>
-      <button class="submit-btn" id="submitBtn" onclick="submitOrder()">Save my order</button>
-      <div class="status" id="submitStatus"></div>
+      <div class="status" id="submitStatus" style="margin-top:0.75rem"></div>
     </div>
 
     <!-- Step 3: Summary -->
@@ -211,6 +202,7 @@
   let order = null;
   let myName = null;
   let myQtys = [];
+  let saveTimer = null;
 
   // ── INIT ───────────────────────────────────────────────────────────────────
   window.onload = async () => {
@@ -425,6 +417,7 @@
     const tag = document.getElementById(`split-tag-${i}`);
     tag.textContent = `${orders} ÷ ${people} = ${val} each`;
     tag.classList.remove('hidden');
+    scheduleAutoSave();
   }
 
   function updateServiceChargeLive() {
@@ -469,6 +462,7 @@
     if (!item.isDiscount && !item.name.toLowerCase().includes('service')) {
       updateServiceChargeLive();
     }
+    scheduleAutoSave();
   }
 
   function getRemaining(item) {
@@ -488,51 +482,18 @@
     return otherVals.length ? otherVals[0] : 0;
   }
 
-  // ── SUBMIT ─────────────────────────────────────────────────────────────────
-  async function submitOrder() {
-    const btn = document.getElementById('submitBtn');
+  // ── AUTO-SAVE ────────────────────────────────────────────────────────────
+  function scheduleAutoSave() {
+    if (!myName) return;
+    clearTimeout(saveTimer);
     const st = document.getElementById('submitStatus');
-
-    // Auto-compute service charge proportionally if user hasn't set it
-    const scIdx = order.items.findIndex(it => !it.isDiscount && it.name.toLowerCase().includes('service'));
-    if (scIdx !== -1 && (myQtys[scIdx] || 0) === 0) {
-      const foodItems = order.items.filter(it => !it.isDiscount && !it.name.toLowerCase().includes('service'));
-      const receiptFoodTotal = foodItems.reduce((s, it) => s + (parseFloat(it.unit_cost) || 0) * (parseInt(it.qty) || 1), 0);
-      const myFoodTotal = foodItems.reduce((s, it) => {
-        const idx = order.items.indexOf(it);
-        return s + (myQtys[idx] || 0) * (parseFloat(it.unit_cost) || 0);
-      }, 0);
-      if (receiptFoodTotal > 0 && myFoodTotal > 0) {
-        const proportion = myFoodTotal / receiptFoodTotal;
-        myQtys[scIdx] = Math.round(proportion * 1000) / 1000;
-      }
-    }
-
-    // Validate: total assigned per item can't exceed item qty (skip service charge — proportions may round over 1)
-    for (let i = 0; i < order.items.length; i++) {
-      const item = order.items[i];
-      if (!item.isDiscount && item.name.toLowerCase().includes('service')) continue;
-      const maxQty = parseFloat(item.qty) || 1;
-      const myQty = myQtys[i] || 0;
-
-      // sum all existing assignments except mine
-      const othersTotal = Object.entries(item.assignments || {})
-        .filter(([n]) => n !== myName)
-        .reduce((s, [, q]) => s + parseFloat(q || 0), 0);
-
-      const newTotal = othersTotal + myQty;
-      if (newTotal > maxQty + 0.001) {
-        st.className = 'status error';
-        st.textContent = `"${item.name}" is over-assigned (${newTotal.toFixed(2)} of ${maxQty} ordered). Please reduce your quantity.`;
-        return;
-      }
-    }
-
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Saving...';
     st.className = 'status';
-    st.textContent = '';
+    st.textContent = 'Saving...';
+    saveTimer = setTimeout(() => autoSave(), 800);
+  }
 
+  async function autoSave() {
+    const st = document.getElementById('submitStatus');
     try {
       const res = await fetch(`${ORDERS_URL}/${orderId}`, {
         method: 'PUT',
@@ -546,16 +507,11 @@
       if (data.error) throw new Error(data.error);
       order = data;
       st.className = 'status ok';
-      st.textContent = '✓ Order saved!';
+      st.textContent = '✓ Saved';
       renderParticipants();
-      renderItems();
-      renderSummary();
     } catch (err) {
       st.className = 'status error';
-      st.textContent = 'Error: ' + err.message;
-    } finally {
-      btn.innerHTML = 'Save my order';
-      btn.disabled = false;
+      st.textContent = 'Error saving: ' + err.message;
     }
   }
 
