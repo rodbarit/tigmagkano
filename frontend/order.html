@@ -325,7 +325,8 @@
             <div class="qty-num" id="qty-${i}">${existing}</div>
             <button class="qty-btn" onclick="changeQty(${i}, 1)" ${existing >= remaining ? 'disabled' : ''}>+</button>
           </div>
-          <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>`
+          <button class="split-btn" id="split-btn-${i}" onclick="toggleSplit(${i})">Split</button>
+          ${isShared ? `<button class="split-btn" onclick="splitByOrder(${i})" style="color:#1D9E75;border-color:#b8e0d0;background:#f0f7f4">By order</button>` : ''}`
           }
         </div>
         <div class="split-row hidden" id="split-row-${i}">
@@ -420,6 +421,43 @@
     const tag = document.getElementById(`split-tag-${i}`);
     tag.textContent = `${orders} ÷ ${people} = ${val} each`;
     tag.classList.remove('hidden');
+  }
+
+  function splitByOrder(i) {
+    const foodItems = order.items.filter(it => !it.isDiscount && !it.name.toLowerCase().includes('service'));
+
+    const myFoodTotal = foodItems.reduce((s, item) => {
+      const idx = order.items.indexOf(item);
+      return s + (myQtys[idx] || 0) * (parseFloat(item.unit_cost) || 0);
+    }, 0);
+
+    if (myFoodTotal <= 0) {
+      alert('Add your food items first before splitting the service charge by order.');
+      return;
+    }
+
+    const allNames = [...new Set([...(order.names || []), ...(myName ? [myName] : [])])];
+    const totalFoodAmount = allNames.reduce((sum, n) => {
+      return sum + foodItems.reduce((s, item) => {
+        const idx = order.items.indexOf(item);
+        const qty = n === myName ? (myQtys[idx] || 0) : (parseFloat(item.assignments?.[n]) || 0);
+        return s + qty * (parseFloat(item.unit_cost) || 0);
+      }, 0);
+    }, 0);
+
+    const myProportion = totalFoodAmount > 0 ? myFoodTotal / totalFoodAmount : 1;
+    const val = Math.round(myProportion * 1000) / 1000;
+    myQtys[i] = val;
+    document.getElementById(`qty-${i}`).textContent = val;
+    document.getElementById(`qty-${i}`).style.color = '#1D9E75';
+
+    const tag = document.getElementById(`split-tag-${i}`);
+    if (tag) {
+      tag.textContent = `${(myProportion * 100).toFixed(1)}% of orders`;
+      tag.classList.remove('hidden');
+    }
+
+    renderSummary();
   }
 
   function changeQty(i, delta) {
