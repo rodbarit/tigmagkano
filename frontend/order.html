@@ -426,25 +426,24 @@
   async function splitByOrder(i) {
     const foodItems = order.items.filter(it => !it.isDiscount && !it.name.toLowerCase().includes('service'));
 
-    const allNames = [...new Set([...(order.names || []), ...(myName ? [myName] : [])])];
+    // Use total receipt food amount as denominator — no need to wait for others to submit
+    const receiptFoodTotal = foodItems.reduce((s, item) =>
+      s + (parseFloat(item.unit_cost) || 0) * (parseInt(item.qty) || 1), 0);
 
-    const foodTotals = {};
-    allNames.forEach(n => {
-      foodTotals[n] = foodItems.reduce((s, item) => {
-        const idx = order.items.indexOf(item);
-        const qty = n === myName ? (myQtys[idx] || 0) : (parseFloat(item.assignments?.[n]) || 0);
-        return s + qty * (parseFloat(item.unit_cost) || 0);
-      }, 0);
-    });
+    if (receiptFoodTotal <= 0) return;
 
-    const grandFoodTotal = Object.values(foodTotals).reduce((s, v) => s + v, 0);
-    if (grandFoodTotal <= 0) {
-      alert('No food orders found yet. Everyone needs to submit their orders first.');
+    const myFoodTotal = foodItems.reduce((s, item) => {
+      const idx = order.items.indexOf(item);
+      return s + (myQtys[idx] || 0) * (parseFloat(item.unit_cost) || 0);
+    }, 0);
+
+    if (myFoodTotal <= 0) {
+      alert('Add your food items first before splitting the service charge by order.');
       return;
     }
 
-    // Update my proportion locally
-    const myProportion = (foodTotals[myName] || 0) / grandFoodTotal;
+    // My proportion = my food total / full receipt food total
+    const myProportion = myFoodTotal / receiptFoodTotal;
     const myVal = Math.round(myProportion * 1000) / 1000;
     myQtys[i] = myVal;
     document.getElementById(`qty-${i}`).textContent = myVal;
@@ -459,7 +458,11 @@
     // Push proportional service charge to all other participants sequentially
     const otherNames = (order.names || []).filter(n => n !== myName);
     for (const n of otherNames) {
-      const proportion = foodTotals[n] / grandFoodTotal;
+      const theirFoodTotal = foodItems.reduce((s, item) => {
+        const idx = order.items.indexOf(item);
+        return s + (parseFloat(item.assignments?.[n]) || 0) * (parseFloat(item.unit_cost) || 0);
+      }, 0);
+      const proportion = theirFoodTotal / receiptFoodTotal;
       const val = Math.round(proportion * 1000) / 1000;
       const assignments = order.items.map((item, idx) =>
         idx === i ? val : (parseFloat(item.assignments?.[n]) || 0)
