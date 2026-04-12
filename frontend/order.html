@@ -423,38 +423,58 @@
     tag.classList.remove('hidden');
   }
 
-  function splitByOrder(i) {
+  async function splitByOrder(i) {
     const foodItems = order.items.filter(it => !it.isDiscount && !it.name.toLowerCase().includes('service'));
 
-    const myFoodTotal = foodItems.reduce((s, item) => {
-      const idx = order.items.indexOf(item);
-      return s + (myQtys[idx] || 0) * (parseFloat(item.unit_cost) || 0);
-    }, 0);
-
-    if (myFoodTotal <= 0) {
-      alert('Add your food items first before splitting the service charge by order.');
-      return;
-    }
-
     const allNames = [...new Set([...(order.names || []), ...(myName ? [myName] : [])])];
-    const totalFoodAmount = allNames.reduce((sum, n) => {
-      return sum + foodItems.reduce((s, item) => {
+
+    const foodTotals = {};
+    allNames.forEach(n => {
+      foodTotals[n] = foodItems.reduce((s, item) => {
         const idx = order.items.indexOf(item);
         const qty = n === myName ? (myQtys[idx] || 0) : (parseFloat(item.assignments?.[n]) || 0);
         return s + qty * (parseFloat(item.unit_cost) || 0);
       }, 0);
-    }, 0);
+    });
 
-    const myProportion = totalFoodAmount > 0 ? myFoodTotal / totalFoodAmount : 1;
-    const val = Math.round(myProportion * 1000) / 1000;
-    myQtys[i] = val;
-    document.getElementById(`qty-${i}`).textContent = val;
+    const grandFoodTotal = Object.values(foodTotals).reduce((s, v) => s + v, 0);
+    if (grandFoodTotal <= 0) {
+      alert('No food orders found yet. Everyone needs to submit their orders first.');
+      return;
+    }
+
+    // Update my proportion locally
+    const myProportion = (foodTotals[myName] || 0) / grandFoodTotal;
+    const myVal = Math.round(myProportion * 1000) / 1000;
+    myQtys[i] = myVal;
+    document.getElementById(`qty-${i}`).textContent = myVal;
     document.getElementById(`qty-${i}`).style.color = '#1D9E75';
 
     const tag = document.getElementById(`split-tag-${i}`);
     if (tag) {
       tag.textContent = `${(myProportion * 100).toFixed(1)}% of orders`;
       tag.classList.remove('hidden');
+    }
+
+    // Push proportional service charge to all other participants sequentially
+    const otherNames = (order.names || []).filter(n => n !== myName);
+    for (const n of otherNames) {
+      const proportion = foodTotals[n] / grandFoodTotal;
+      const val = Math.round(proportion * 1000) / 1000;
+      const assignments = order.items.map((item, idx) =>
+        idx === i ? val : (parseFloat(item.assignments?.[n]) || 0)
+      );
+      try {
+        const res = await fetch(`${ORDERS_URL}/${orderId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: n, assignments })
+        });
+        const data = await res.json();
+        if (data.items) order = data;
+      } catch (e) {
+        console.error(`Failed to update ${n}'s service charge`, e);
+      }
     }
 
     renderSummary();
