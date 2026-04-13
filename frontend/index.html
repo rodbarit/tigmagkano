@@ -266,11 +266,18 @@
 
   <div class="card">
     <div class="step-label"><span class="step-num">1</span> Upload receipt</div>
-    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fi').click()">
-      <span class="upload-icon">📷</span>
-      <p class="upload-main"><strong>Click to upload</strong> or drag &amp; drop</p>
-      <p class="upload-hint">JPG or PNG</p>
-      <input type="file" id="fi" accept="image/jpeg,image/png,image/webp" onchange="handleFile(event)">
+    <div style="display:flex;gap:10px;margin-bottom:0.5rem">
+      <button onclick="document.getElementById('fiCamera').click()" style="flex:1;padding:1rem;font-size:14px;font-weight:600;font-family:inherit;background:var(--blue-dark);color:#fff;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:80px;transition:opacity 0.15s" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:28px">📸</span>Take photo
+      </button>
+      <button onclick="document.getElementById('fi').click()" style="flex:1;padding:1rem;font-size:14px;font-weight:600;font-family:inherit;background:#f0f4fa;color:var(--text);border:1px solid var(--border);border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:80px;transition:opacity 0.15s" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:28px">🖼️</span>From gallery
+      </button>
+    </div>
+    <input type="file" id="fiCamera" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="handleFile(event)" style="display:none">
+    <input type="file" id="fi" accept="image/jpeg,image/png,image/webp" onchange="handleFile(event)" style="display:none">
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fi').click()" style="padding:1rem;min-height:auto">
+      <p class="upload-main" style="font-size:12px">Or <strong>drag &amp; drop</strong> a receipt image here</p>
     </div>
     <div id="imgContainer" style="text-align:center;margin-top:1rem;display:none">
       <img id="prevImg" alt="Receipt preview"
