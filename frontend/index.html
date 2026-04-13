@@ -399,19 +399,30 @@
 
   function handleFile(e) { if (e.target.files[0]) loadFile(e.target.files[0]); }
   function loadFile(file) {
-
-    imageMime = file.type || 'image/jpeg';
-    const r = new FileReader();
-    r.onload = e => {
-      imageBase64 = e.target.result.split(',')[1];
-      const img = document.getElementById('prevImg');
-      img.src = e.target.result;
-      document.getElementById('lightboxImg').src = e.target.result;
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1600;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      imageMime = 'image/jpeg';
+      imageBase64 = dataUrl.split(',')[1];
+      const prev = document.getElementById('prevImg');
+      prev.src = dataUrl;
+      document.getElementById('lightboxImg').src = dataUrl;
       document.getElementById('imgContainer').style.display = 'block';
       document.getElementById('parseBtn').disabled = false;
       setStatus('');
     };
-    r.readAsDataURL(file);
+    img.src = URL.createObjectURL(file);
   }
 
   function openLightbox() {
