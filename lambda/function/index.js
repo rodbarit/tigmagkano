@@ -30,7 +30,7 @@ exports.handler = async (event) => {
 
   // ── PARSE RECEIPT  POST /parse ───────────────────────────────────────────
   if (method === 'POST' && path === '/parse') {
-    // Rate limit: 5 parses per IP per day
+    // Rate limit: 10 parses per IP per day
     const ip = event.requestContext?.http?.sourceIp || 'unknown';
     const today = new Date().toISOString().slice(0, 10);
     const rateKey = `ratelimit#${ip}#${today}`;
@@ -43,8 +43,8 @@ exports.handler = async (event) => {
       ExpressionAttributeValues: { ':one': 1, ':ttl': rateTtl },
       ReturnValues: 'ALL_NEW',
     }));
-    if (rateResult.Attributes.count > 5) {
-      return resp(429, { error: 'Daily limit reached. You can parse up to 5 receipts per day.' });
+    if (rateResult.Attributes.count > 10) {
+      return resp(429, { error: 'Daily limit reached. You can parse up to 10 receipts per day.' });
     }
 
     let body;
